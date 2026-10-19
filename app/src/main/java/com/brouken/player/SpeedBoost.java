@@ -191,7 +191,7 @@ public class SpeedBoost {
 
     private void ensurePill() {
         if (pillAdded) return;
-        ViewGroup playerView = activity.findViewById(R.id.player_view);
+        ViewGroup playerView = activity.findViewById(R.id.video_view);
         if (playerView == null) return;
         pill = new TextView(activity);
         pill.setTypeface(Typeface.DEFAULT_BOLD);
