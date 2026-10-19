@@ -49,6 +49,7 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
     private boolean restorePlayState;
     private boolean canScale = true;
     private boolean isHandledLongPress = false;
+    private SpeedBoost speedBoost;
     public long keySeekStart = -1;
     public int volumeUpsInRow = 0;
 
@@ -292,16 +293,10 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
 
     @Override
     public void onLongPress(MotionEvent motionEvent) {
-        if (PlayerActivity.locked || (getPlayer() != null && getPlayer().isPlaying())) {
-            PlayerActivity.locked = !PlayerActivity.locked;
-            isHandledLongPress = true;
-            Utils.showText(this, "", MESSAGE_TIMEOUT_LONG);
-            setIconLock(PlayerActivity.locked);
-
-            if (PlayerActivity.locked && PlayerActivity.controllerVisible) {
-                hideController();
-            }
-        }
+        if (PlayerActivity.locked) return;
+        isHandledLongPress = true;
+        Utils.showText(this, "", MESSAGE_TIMEOUT_LONG);
+        if (speedBoost != null) speedBoost.onLongPressDetected(motionEvent.getRawX());
     }
 
     @Override
@@ -401,6 +396,10 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
 
     public void setIconBrightnessAuto() {
         exoErrorMessage.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_brightness_auto_24dp, 0, 0, 0);
+    }
+
+    public void setSpeedBoost(SpeedBoost sb) {
+        speedBoost = sb;
     }
 
     public void setIconLock(boolean locked) {

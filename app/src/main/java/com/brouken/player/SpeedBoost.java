@@ -20,19 +20,17 @@ import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 
 /**
- * SpeedBoost - MX Player style: long-press anywhere on the video surface to
- * temporarily boost playback speed. While holding, drag right to increase and
- * left to decrease the boost smoothly. Release returns to normal speed.
- * The last boost level is remembered for the next hold.
+ * SpeedBoost - MX Player style: long-press on the video to temporarily boost
+ * playback speed. Drag right to increase, left to decrease (down to 1.0x).
+ * Release always returns to the exact pre-boost speed. Level is remembered.
  */
 @OptIn(markerClass = UnstableApi.class)
 public class SpeedBoost {
 
-    private static final float MIN_SPEED = 2.0f;
-    private static final float MAX_SPEED = 5.0f;
-    private static final float SPEED_PER_PX = 0.005f;   // ~600px drag covers full range
-    private static final long LONG_PRESS_MS = 300;
-    private static final int VIOLET = 0xFFB7ABFF;
+    private static final float MIN_SPEED = 1.0f;
+    private static final float MAX_SPEED = 4.0f;
+    private static final float START_SPEED = 2.0f;
+    private static final float SPEED_PER_PX = 0.005f;
 
     private final PlayerActivity activity;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -40,65 +38,52 @@ public class SpeedBoost {
     private TextView pill;
     private boolean pillAdded;
 
-    private float level = MIN_SPEED;
+    private float level = START_SPEED;     // remembered boost level
     private boolean boosted = false;
-    private float restoreSpeed = 1f;
-
-    private boolean armed = false;          // long-press pending
-    private float downX, downY, lastX;
+    private float baseSpeed = 1f;          // exact speed before boost
+    private float startX;
     private float dragBase;
-    private int slop;
 
     private Player.Listener boostListener;
-
-    private final Runnable fireBoost = this::fireBoost;
     private final Runnable hidePill = this::hidePill;
 
     public SpeedBoost(PlayerActivity activity) {
         this.activity = activity;
         SharedPreferences sp = activity.getSharedPreferences("speed_boost", Context.MODE_PRIVATE);
-        level = Math.min(MAX_SPEED, Math.max(MIN_SPEED, sp.getFloat("level", MIN_SPEED)));
-        slop = ViewConfiguration.get(activity).getScaledTouchSlop();
+        level = Math.min(MAX_SPEED, Math.max(MIN_SPEED, sp.getFloat("level", START_SPEED)));
     }
 
-    /** Observe touches on the video surface. Never consumes events before the
-     *  boost fires, so normal taps / double-tap seek / swipes keep working.
-     *  Once boosting, events are consumed so other gestures stay quiet. */
     public void attach() {
         View surface = activity.findViewById(R.id.video_view);
-        if (surface == null) return;
-        surface.setOnTouchListener(onTouch());
+        if (surface instanceof CustomPlayerView) {
+            CustomPlayerView cpv = (CustomPlayerView) surface;
+            cpv.setSpeedBoost(this);
+            cpv.setOnTouchListener(onTouch());
+        }
+    }
+
+    /** Called by CustomPlayerView when a long-press is confirmed. */
+    public void onLongPressDetected(float rawX) {
+        Player p = PlayerActivity.player;
+        if (boosted || PlayerActivity.locked || p == null || !p.isPlaying()) return;
+        // if last level was nearly 1x a hold would do nothing; start at 2x instead
+        float start = level < 1.25f ? START_SPEED : level;
+        startX = rawX;
+        startBoost(start);
     }
 
     private View.OnTouchListener onTouch() {
         return (v, ev) -> {
             switch (ev.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    if (ev.getPointerCount() != 1) return false;
-                    downX = lastX = ev.getRawX();
-                    downY = ev.getRawY();
-                    armed = true;
-                    handler.postDelayed(fireBoost, LONG_PRESS_MS);
-                    return false;
                 case MotionEvent.ACTION_MOVE:
                     if (boosted) {
-                        float dx = ev.getRawX() - downX;
+                        float dx = ev.getRawX() - startX;
                         setLevel(dragBase + dx * SPEED_PER_PX);
                         return true;
-                    }
-                    if (armed) {
-                        float mx = ev.getRawX() - downX;
-                        float my = ev.getRawY() - downY;
-                        if (Math.hypot(mx, my) > slop) {
-                            armed = false;
-                            handler.removeCallbacks(fireBoost);
-                        }
                     }
                     return false;
                 case MotionEvent.ACTION_POINTER_DOWN:
                     if (boosted) return true;
-                    armed = false;
-                    handler.removeCallbacks(fireBoost);
                     return false;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
@@ -107,36 +92,25 @@ public class SpeedBoost {
                         saveLevel();
                         return true;
                     }
-                    armed = false;
-                    handler.removeCallbacks(fireBoost);
                     return false;
             }
             return false;
         };
     }
 
-    private void fireBoost() {
+    private void startBoost(float start) {
         Player p = PlayerActivity.player;
-        if (!armed || p == null || !p.isPlaying()) return;
-        armed = false;
-        startBoost(level);
-    }
-
-    private void startBoost(float speed) {
-        Player p = PlayerActivity.player;
-        if (p == null) return;
-        restoreSpeed = p.getPlaybackParameters().speed;
-        dragBase = speed;
-        p.setPlaybackSpeed(speed);
+        baseSpeed = p.getPlaybackParameters().speed;
+        dragBase = start;
+        p.setPlaybackSpeed(start);
         boosted = true;
-        lastX = downX;
         showPill();
         attachListener(p);
     }
 
     private void stopBoost() {
         Player p = PlayerActivity.player;
-        if (p != null && boosted) p.setPlaybackSpeed(restoreSpeed);
+        if (p != null && boosted) p.setPlaybackSpeed(baseSpeed);
         boosted = false;
         detachListener();
         handler.removeCallbacks(hidePill);
@@ -214,12 +188,12 @@ public class SpeedBoost {
         pill.animate().alpha(1f).setDuration(140).start();
     }
 
-    private void updatePill() {
-        if (pill != null) pill.setText(String.format("%.2fx", level));
-    }
-
     private void hidePill() {
         if (pill != null && !boosted) pill.animate().alpha(0f).setDuration(200).start();
+    }
+
+    private void updatePill() {
+        if (pill != null) pill.setText(String.format("%.2fx", level));
     }
 
     private int dp(int v) {
