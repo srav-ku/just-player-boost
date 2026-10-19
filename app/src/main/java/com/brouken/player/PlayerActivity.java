@@ -2380,13 +2380,13 @@ public class PlayerActivity extends Activity {
 
     private static String audioLabel(Format format, int position) {
         final StringBuilder label = new StringBuilder();
-        String language = format.label;
-        if (language == null || language.isEmpty()) {
-            language = format.language != null && !format.language.isEmpty()
-                    ? new Locale(format.language).getDisplayLanguage()
-                    : "Track " + (position + 1);
+        String language = languageName(format.language);
+        if (language == null) {
+            // Only when the container carries no language tag: use the track title,
+            // but never a release-group / site name.
+            language = cleanTitle(format.label);
         }
-        label.append(language);
+        label.append(language != null ? language : "Track " + (position + 1));
         if (format.channelCount > 2) {
             label.append("  ·  ").append(format.channelCount).append("ch");
         } else if (format.channelCount == 2) {
@@ -2398,6 +2398,65 @@ public class PlayerActivity extends Activity {
             label.append("  ·  ").append(format.codecs.toUpperCase(Locale.US));
         }
         return label.toString();
+    }
+
+    /**
+     * Turns an ISO 639 language tag (2- or 3-letter) into a readable English name.
+     * Returns null for missing/undefined tags so callers can fall back.
+     */
+    private static String languageName(String code) {
+        if (code == null) {
+            return null;
+        }
+        code = code.trim().toLowerCase(Locale.US);
+        int dash = code.indexOf('-');
+        if (dash > 0) {
+            code = code.substring(0, dash);
+        }
+        if (code.isEmpty() || code.equals("und") || code.equals("unknown") || code.equals("mul")) {
+            return null;
+        }
+        switch (code) {
+            case "tel": return "Telugu";
+            case "tam": return "Tamil";
+            case "hin": return "Hindi";
+            case "eng": return "English";
+            case "mal": return "Malayalam";
+            case "kan": return "Kannada";
+            case "ben": return "Bengali";
+            case "mar": return "Marathi";
+            case "guj": return "Gujarati";
+            case "pan": return "Punjabi";
+            case "urd": return "Urdu";
+            case "ori": return "Odia";
+            case "asm": return "Assamese";
+            case "san": return "Sanskrit";
+            case "bho": return "Bhojpuri";
+            default: break;
+        }
+        final String name = Locale.forLanguageTag(code).getDisplayLanguage(Locale.ENGLISH);
+        if (name != null && !name.isEmpty() && !name.equalsIgnoreCase(code)) {
+            return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+        }
+        return code.toUpperCase(Locale.US);
+    }
+
+    /** Track titles like "www.TamilMV.win" are junk, not a language. */
+    private static String cleanTitle(String title) {
+        if (title == null) {
+            return null;
+        }
+        final String value = title.trim();
+        if (value.isEmpty() || value.length() > 40) {
+            return null;
+        }
+        final String lower = value.toLowerCase(Locale.US);
+        if (lower.startsWith("www.") || lower.contains("http") || lower.contains(".com")
+                || lower.contains(".win") || lower.contains(".net") || lower.contains(".org")
+                || lower.contains(".in") || lower.contains(".to") || lower.contains(".cc")) {
+            return null;
+        }
+        return value;
     }
 
     private void showSubtitleSheet() {
@@ -2449,15 +2508,16 @@ public class PlayerActivity extends Activity {
     }
 
     private static String subtitleLabel(Format format, int position) {
-        if (format.label != null && !format.label.isEmpty()) {
-            return format.label;
+        final String language = languageName(format.language);
+        final String title = cleanTitle(format.label);
+        if (language != null && title != null && !title.equalsIgnoreCase(language)) {
+            return language + "  ·  " + title;
         }
-        if (format.language != null && !format.language.isEmpty()) {
-            final String language = new Locale(format.language).getDisplayLanguage();
-            if (language != null && !language.isEmpty() && !language.equals(format.language)) {
-                return language;
-            }
-            return format.language;
+        if (language != null) {
+            return language;
+        }
+        if (title != null) {
+            return title;
         }
         return "Track " + position;
     }
