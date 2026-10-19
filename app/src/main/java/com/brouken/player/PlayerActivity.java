@@ -124,6 +124,7 @@ public class PlayerActivity extends Activity {
     public static ExoPlayer player;
     private YouTubeOverlay youTubeOverlay;
 
+    private SpeedBoost speedBoost;
     private Object mPictureInPictureParamsBuilder;
 
     public Prefs mPrefs;
@@ -611,6 +612,7 @@ public class PlayerActivity extends Activity {
             return true;
         });
 
+        speedBoost = new SpeedBoost(this);
         updateButtons(false);
 
         final HorizontalScrollView horizontalScrollView = (HorizontalScrollView) getLayoutInflater().inflate(R.layout.controls, null);
@@ -628,6 +630,7 @@ public class PlayerActivity extends Activity {
         if (!isTvBox) {
             controls.addView(buttonRotation);
         }
+        controls.addView(speedBoost.createButton());
         controls.addView(exoSettings);
 
         exoBasicControls.addView(horizontalScrollView);
@@ -1422,6 +1425,7 @@ public class PlayerActivity extends Activity {
             player = null;
         }
         titleView.setVisibility(View.GONE);
+        speedBoost = new SpeedBoost(this);
         updateButtons(false);
     }
 

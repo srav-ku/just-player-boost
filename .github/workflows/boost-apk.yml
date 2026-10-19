@@ -1,0 +1,25 @@
+name: Boost APK
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: chmod +x gradlew
+      - run: ./gradlew assembleLatestUniversalDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: just-player-boost-debug
+          path: app/build/outputs/apk/**/debug/*.apk
