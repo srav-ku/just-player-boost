@@ -164,6 +164,7 @@ public class PlayerActivity extends Activity {
     private ImageButton buttonRotation;
     private ImageButton exoSettings;
     private ImageButton exoPlayPause;
+    private RemainingTimeView durationView;
     private ProgressBar loadingProgressBar;
     private PlayerControlView controlView;
     private CustomDefaultTimeBar timeBar;
@@ -326,6 +327,7 @@ public class PlayerActivity extends Activity {
         playerView = findViewById(R.id.video_view);
         exoPlayPause = findViewById(R.id.exo_play_pause);
         loadingProgressBar = findViewById(R.id.loading);
+        durationView = (RemainingTimeView) findViewById(R.id.exo_duration);
 
         playerView.setShowNextButton(false);
         playerView.setShowPreviousButton(false);
@@ -609,15 +611,8 @@ public class PlayerActivity extends Activity {
         }
         playerView.setBrightnessControl(mBrightnessControl);
 
-        final LinearLayout exoBasicControls = playerView.findViewById(R.id.exo_basic_controls);
-        final ImageButton exoSubtitle = exoBasicControls.findViewById(R.id.exo_subtitle);
-        exoBasicControls.removeView(exoSubtitle);
-
-        exoSettings = exoBasicControls.findViewById(R.id.exo_settings);
-        exoBasicControls.removeView(exoSettings);
-        final ImageButton exoRepeat = exoBasicControls.findViewById(R.id.exo_repeat_toggle);
-        exoBasicControls.removeView(exoRepeat);
-        //exoBasicControls.setVisibility(View.GONE);
+        final ImageButton exoSubtitle = findViewById(R.id.exo_subtitle);
+        exoSettings = findViewById(R.id.exo_settings);
 
         exoSettings.setOnLongClickListener(view -> {
             //askForScope(false, false);
@@ -635,17 +630,21 @@ public class PlayerActivity extends Activity {
         speedBoost = new SpeedBoost(this);
         updateButtons(false);
 
-        final HorizontalScrollView horizontalScrollView = (HorizontalScrollView) getLayoutInflater().inflate(R.layout.controls, null);
-        final LinearLayout controls = horizontalScrollView.findViewById(R.id.controls);
+        final LinearLayout exoRightGroup = (LinearLayout) findViewById(R.id.exo_right_group);
+        exoRightGroup.addView(buttonAspectRatio);
 
-        controls.addView(exoSubtitle);
-        controls.addView(buttonAspectRatio);
+        ImageButton exoRewButton = (ImageButton) findViewById(R.id.exo_rew);
+        exoRewButton.setOnClickListener(v -> {
+            if (player != null) player.seekTo(Math.max(0L, player.getCurrentPosition() - 10000L));
+        });
 
-        exoBasicControls.addView(horizontalScrollView);
+        ImageButton exoFfwdButton = (ImageButton) findViewById(R.id.exo_ffwd);
+        exoFfwdButton.setOnClickListener(v -> {
+            if (player != null) player.seekTo(player.getCurrentPosition() + 10000L);
+        });
 
-        if (Build.VERSION.SDK_INT > 23) {
-            horizontalScrollView.setOnScrollChangeListener((view, i, i1, i2, i3) -> resetHideCallbacks());
-        }
+        ImageButton exoSpeedButton = (ImageButton) findViewById(R.id.exo_speed);
+        exoSpeedButton.setOnClickListener(v -> showSpeedMenu());
 
         speedBoost.attach();
         playerView.setControllerVisibilityListener(new PlayerView.ControllerVisibilityListener() {
@@ -1178,6 +1177,7 @@ public class PlayerActivity extends Activity {
             player.clearMediaItems();
             player.release();
             player = null;
+        if (durationView != null) durationView.setPlayer(null);
         }
 
         trackSelector = new DefaultTrackSelector(this);
@@ -1239,6 +1239,7 @@ public class PlayerActivity extends Activity {
         }
 
         player = playerBuilder.build();
+        if (durationView != null) durationView.setPlayer(player);
 
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
                 .setUsage(C.USAGE_MEDIA)
@@ -1414,6 +1415,7 @@ public class PlayerActivity extends Activity {
             player.clearMediaItems();
             player.release();
             player = null;
+        if (durationView != null) durationView.setPlayer(null);
         }
         titleView.setVisibility(View.GONE);
         speedBoost = new SpeedBoost(this);
@@ -2264,6 +2266,25 @@ public class PlayerActivity extends Activity {
             playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
         }
         updatebuttonAspectRatioIcon();
+    }
+
+    private void showSpeedMenu() {
+        if (player == null) return;
+        final float[] speeds = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.0f};
+        String[] labels = new String[speeds.length];
+        float current = player.getPlaybackParameters().speed;
+        int checked = 0;
+        for (int i = 0; i < speeds.length; i++) {
+            labels[i] = speeds[i] + "x";
+            if (Math.abs(speeds[i] - current) < 0.01f) checked = i;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Speed")
+                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                    if (player != null) player.setPlaybackSpeed(speeds[which]);
+                    dialog.dismiss();
+                })
+                .show();
     }
 
     private void updatebuttonAspectRatioIcon() {
