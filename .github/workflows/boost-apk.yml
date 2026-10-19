@@ -18,8 +18,16 @@ jobs:
           java-version: 21
           cache: gradle
       - run: chmod +x gradlew
-      - run: ./gradlew assembleLatestUniversalDebug --no-daemon
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${GITHUB_WORKSPACE}/keystore.jks
+      - name: Build signed release APK
+        run: >-
+          ./gradlew assembleLatestUniversalRelease --no-daemon
+          -Pandroid.injected.signing.store.file=${GITHUB_WORKSPACE}/keystore.jks
+          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }}
+          -Pandroid.injected.signing.key.alias=boost
+          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
-          name: just-player-boost-debug
-          path: app/build/outputs/apk/**/debug/*.apk
+          name: just-player-boost-release
+          path: app/build/outputs/apk/**/release/*.apk
