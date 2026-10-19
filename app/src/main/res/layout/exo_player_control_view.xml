@@ -16,99 +16,177 @@
 
   <View android:id="@+id/exo_scrim_bottom"
       android:layout_width="match_parent"
-      android:layout_height="150dp"
+      android:layout_height="170dp"
       android:background="@drawable/scrim_bottom"
       android:layout_gravity="bottom" />
 
-  <FrameLayout android:id="@+id/exo_bottom_bar"
+  <!-- Top row: thin chevron + title, aligned with the reference -->
+  <LinearLayout android:id="@+id/top_bar"
       android:layout_width="match_parent"
-      android:layout_height="56dp"
-      android:layout_gravity="bottom"
-      android:background="@android:color/transparent"
-      android:layoutDirection="ltr">
-
-  <LinearLayout
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_gravity="top|start"
       android:layoutDirection="ltr"
       android:orientation="horizontal"
       android:gravity="center_vertical"
-      android:paddingStart="10dp"
-      android:paddingEnd="10dp">
+      android:paddingStart="24dp"
+      android:paddingEnd="24dp"
+      android:paddingTop="25dp">
 
-    <ImageButton android:id="@+id/exo_subtitle"
-        style="@style/ExoStyledControls.Button.Bottom.CC" />
-
-    <TextView android:id="@+id/exo_position"
-        style="@style/ExoStyledControls.TimeText.Position"
-        android:layout_marginStart="6dp" />
-
-    <TextView
-        style="@style/ExoStyledControls.TimeText.Separator"
-        android:text="/" />
-
-    <com.brouken.player.RemainingTimeView android:id="@+id/exo_duration"
-        style="@style/ExoStyledControls.TimeText.Duration"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
-    <Space
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:layout_weight="1" />
-
-    <ImageButton android:id="@+id/exo_rew"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:scaleType="fitCenter"
-        android:padding="9dp"
-        android:src="@drawable/exo_styled_controls_rewind" />
-
-    <ImageButton android:id="@+id/exo_play_pause"
+    <ImageButton android:id="@+id/exo_back"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
-        android:padding="10dp" />
+        android:padding="12dp"
+        android:src="@drawable/ic_p_back"
+        android:contentDescription="Back" />
 
-    <ImageButton android:id="@+id/exo_ffwd"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:scaleType="fitCenter"
-        android:padding="9dp"
-        android:src="@drawable/exo_styled_controls_fastforward" />
-
-    <Space
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:layout_weight="1" />
-
-    <LinearLayout android:id="@+id/exo_right_group"
+    <TextView android:id="@+id/player_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.01"
+        android:textSize="17sp"
+        android:textColor="#F2FFFFFF"
+        android:textDirection="locale" />
+
+  </LinearLayout>
+
+  <!-- Single low control bar: CC | speaker | time ... rew | play | fwd ... speed | aspect -->
+  <FrameLayout android:id="@+id/exo_bottom_bar"
+      android:layout_width="match_parent"
+      android:layout_height="56dp"
+      android:layout_gravity="bottom"
+      android:layout_marginBottom="19dp"
+      android:background="@android:color/transparent"
+      android:paddingStart="28dp"
+      android:paddingEnd="28dp"
+      android:layoutDirection="ltr">
+
+    <LinearLayout android:id="@+id/exo_left_group"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start|center_vertical"
+        android:layoutDirection="ltr"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layoutDirection="ltr">
+        android:gravity="center_vertical">
 
-      <ImageButton android:id="@+id/exo_settings"
-          android:layout_width="44dp"
-          android:layout_height="44dp"
-          android:visibility="gone"
-          android:background="?android:attr/selectableItemBackgroundBorderless" />
-
-      <ImageButton android:id="@+id/exo_speed"
-          android:layout_width="44dp"
-          android:layout_height="44dp"
+      <ImageButton android:id="@+id/exo_subtitle"
+          android:layout_width="48dp"
+          android:layout_height="48dp"
           android:background="?android:attr/selectableItemBackgroundBorderless"
           android:scaleType="fitCenter"
-          android:padding="10dp"
-          android:src="@drawable/ic_speed" />
+          android:padding="12dp"
+          android:src="@drawable/ic_p_subtitles"
+          android:contentDescription="Subtitles" />
+
+      <ImageButton android:id="@+id/exo_mute"
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:layout_marginStart="8dp"
+          android:background="?android:attr/selectableItemBackgroundBorderless"
+          android:scaleType="fitCenter"
+          android:padding="12dp"
+          android:src="@drawable/ic_p_speaker"
+          android:contentDescription="Mute" />
+
+      <com.brouken.player.PositionTimeView android:id="@+id/exo_position"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginStart="16dp"
+          android:includeFontPadding="false"
+          android:gravity="center_vertical"
+          android:fontFeatureSettings="tnum"
+          android:textSize="14sp"
+          android:textColor="#FFFFFFFF" />
+
+      <TextView android:id="@+id/exo_time_separator"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginStart="6dp"
+          android:layout_marginEnd="6dp"
+          android:includeFontPadding="false"
+          android:gravity="center_vertical"
+          android:text="/"
+          android:textSize="14sp"
+          android:textColor="#FFFFFFFF" />
+
+      <com.brouken.player.RemainingTimeView android:id="@+id/exo_duration"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:includeFontPadding="false"
+          android:gravity="center_vertical"
+          android:fontFeatureSettings="tnum"
+          android:textSize="14sp"
+          android:textColor="#FFFFFFFF" />
 
     </LinearLayout>
 
-  </LinearLayout>
+    <LinearLayout android:id="@+id/exo_center_group"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:layoutDirection="ltr"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+      <ImageButton android:id="@+id/exo_rew"
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:background="?android:attr/selectableItemBackgroundBorderless"
+          android:scaleType="fitCenter"
+          android:padding="12dp"
+          android:src="@drawable/ic_p_rew10"
+          android:contentDescription="Rewind 10 seconds" />
+
+      <ImageButton android:id="@+id/exo_play_pause"
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:layout_marginStart="28dp"
+          android:layout_marginEnd="28dp"
+          android:background="?android:attr/selectableItemBackgroundBorderless"
+          android:scaleType="fitCenter"
+          android:padding="12dp"
+          android:contentDescription="Play" />
+
+      <ImageButton android:id="@+id/exo_ffwd"
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:background="?android:attr/selectableItemBackgroundBorderless"
+          android:scaleType="fitCenter"
+          android:padding="12dp"
+          android:src="@drawable/ic_p_fwd10"
+          android:contentDescription="Forward 10 seconds" />
+
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/exo_right_group"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="end|center_vertical"
+        android:layoutDirection="ltr"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+      <ImageButton android:id="@+id/exo_speed"
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:background="?android:attr/selectableItemBackgroundBorderless"
+          android:scaleType="fitCenter"
+          android:padding="12dp"
+          android:src="@drawable/ic_p_speed"
+          android:contentDescription="Speed" />
+
+      <ImageButton android:id="@+id/exo_settings"
+          android:layout_width="0dp"
+          android:layout_height="0dp"
+          android:visibility="gone" />
+
+    </LinearLayout>
 
   </FrameLayout>
 
@@ -116,6 +194,8 @@
       android:layout_width="match_parent"
       android:layout_height="@dimen/exo_styled_progress_layout_height"
       android:layout_gravity="bottom"
+      android:layout_marginStart="28dp"
+      android:layout_marginEnd="28dp"
       android:layout_marginBottom="@dimen/exo_styled_progress_margin_bottom"
       app:bar_height="@dimen/exo_styled_progress_bar_height"
       app:bar_gravity="bottom"
@@ -123,8 +203,8 @@
       app:scrubber_enabled_size="@dimen/exo_styled_progress_enabled_thumb_size"
       app:scrubber_dragged_size="@dimen/exo_styled_progress_dragged_thumb_size"
       app:ad_marker_width="@dimen/marker_width"
-      app:played_color="@android:color/white"
-      app:scrubber_color="@android:color/white"
+      app:played_color="#FFFFFFFF"
+      app:scrubber_color="#FFFFFFFF"
       app:buffered_color="@color/progress_buffered"
       app:unplayed_color="@color/progress_unplayed"
       app:ad_marker_color="@android:color/transparent"

@@ -165,6 +165,12 @@ public class PlayerActivity extends Activity {
     private ImageButton exoSettings;
     private ImageButton exoPlayPause;
     private RemainingTimeView durationView;
+    private ImageButton exoSubtitleButton;
+    private ImageButton exoMute;
+    private ImageButton exoRewButton;
+    private ImageButton exoFfwdButton;
+    private ImageButton exoSpeedButton;
+    private boolean muted;
     private ProgressBar loadingProgressBar;
     private PlayerControlView controlView;
     private CustomDefaultTimeBar timeBar;
@@ -411,9 +417,14 @@ public class PlayerActivity extends Activity {
             }
         }
 
-        buttonAspectRatio = new ImageButton(this, null, 0, R.style.ExoStyledControls_Button_Bottom);
+        buttonAspectRatio = new ImageButton(this);
         buttonAspectRatio.setId(Integer.MAX_VALUE - 100);
         buttonAspectRatio.setContentDescription(getString(R.string.button_crop));
+        buttonAspectRatio.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        buttonAspectRatio.setPadding(Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12));
+        final TypedValue aspectBackground = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, aspectBackground, true);
+        buttonAspectRatio.setBackgroundResource(aspectBackground.resourceId);
         updatebuttonAspectRatioIcon();
         buttonAspectRatio.setOnClickListener(view -> {
             playerView.setScale(1.f);
@@ -446,29 +457,9 @@ public class PlayerActivity extends Activity {
             resetHideCallbacks();
         });
 
-        final int titleViewPaddingHorizontal = Utils.dpToPx(14);
-        final int titleViewPaddingVertical = getResources().getDimensionPixelOffset(R.dimen.exo_styled_bottom_bar_time_padding);
-        FrameLayout centerView = playerView.findViewById(R.id.exo_controls_background);
-        titleView = new TextView(this);
-        titleView.setTextColor(Color.argb(0xF2, 0xFF, 0xFF, 0xFF));
-        titleView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        titleView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        titleView.setPadding(titleViewPaddingHorizontal + Utils.dpToPx(52), titleViewPaddingVertical, titleViewPaddingHorizontal, titleViewPaddingVertical);
-        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        titleView.setVisibility(View.GONE);
-        titleView.setMaxLines(1);
-        titleView.setEllipsize(TextUtils.TruncateAt.END);
-        titleView.setTextDirection(View.TEXT_DIRECTION_LOCALE);
-        centerView.addView(titleView);
-
-        buttonTopBack = new ImageButton(this, null, 0, R.style.ExoStyledControls_Button_Bottom);
-        buttonTopBack.setImageResource(R.drawable.ic_top_back);
-        buttonTopBack.setImageTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
-        buttonTopBack.setContentDescription("Back");
-        buttonTopBack.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                android.view.Gravity.TOP | android.view.Gravity.START));
+        titleView = findViewById(R.id.player_title);
+        buttonTopBack = findViewById(R.id.exo_back);
         buttonTopBack.setOnClickListener(view -> onBackPressed());
-        centerView.addView(buttonTopBack);
 
         titleView.setOnLongClickListener(view -> {
             // Prevent FileUriExposedException
@@ -498,7 +489,7 @@ public class PlayerActivity extends Activity {
         ((TextView) findViewById(R.id.exo_position)).setFontFeatureSettings("tnum");
         TextView exoDurationView = findViewById(R.id.exo_duration);
         exoDurationView.setFontFeatureSettings("tnum");
-        exoDurationView.setTextColor(Color.argb(0x8C, 0xFF, 0xFF, 0xFF));
+        exoDurationView.setTextColor(Color.WHITE);
 
         controlView.setOnApplyWindowInsetsListener((view, windowInsets) -> {
             if (windowInsets != null) {
@@ -542,31 +533,18 @@ public class PlayerActivity extends Activity {
                     exoTop.getLayoutParams().height = Math.max(windowInsets.getSystemWindowInsetTop(), Utils.dpToPx(130));
                     Utils.setViewMargins(exoTop, left, 0, right, 0);
 
-                    final FrameLayout exoBottomBar = findViewById(R.id.exo_bottom_bar);
-                    ViewGroup.LayoutParams params = exoBottomBar.getLayoutParams();
-                    params.height = getResources().getDimensionPixelSize(R.dimen.exo_styled_bottom_bar_height) + windowInsets.getSystemWindowInsetBottom();
-                    exoBottomBar.setLayoutParams(params);
-
                     findViewById(R.id.exo_left).getLayoutParams().width = left;
                     findViewById(R.id.exo_right).getLayoutParams().width = right;
 
-                    bottomBarPaddingBottom = windowInsets.getSystemWindowInsetBottom();
                     progressBarMarginBottom = windowInsets.getSystemWindowInsetBottom();
-                } else {
-                    view.setPadding(0, windowInsets.getSystemWindowInsetTop(),0, windowInsets.getSystemWindowInsetBottom());
                 }
 
-                Utils.setViewParams(titleView, paddingLeft + titleViewPaddingHorizontal + Utils.dpToPx(52), titleViewPaddingVertical, paddingRight + titleViewPaddingHorizontal, titleViewPaddingVertical,
-                        marginLeft, windowInsets.getSystemWindowInsetTop(), marginRight, 0);
-                if (buttonTopBack != null) {
-                    Utils.setViewMargins(buttonTopBack, marginLeft, windowInsets.getSystemWindowInsetTop(), 0, 0);
-                }
+                // Fixed reference geometry: 28dp side insets, bar lifted off the bottom edge.
+                Utils.setViewMargins(findViewById(R.id.exo_bottom_bar), marginLeft, 0, marginRight, Utils.dpToPx(19));
 
-                Utils.setViewParams(findViewById(R.id.exo_bottom_bar), paddingLeft, 0, paddingRight, bottomBarPaddingBottom,
-                        marginLeft, 0, marginRight, 0);
-
-                Utils.setViewParams(findViewById(R.id.exo_progress), windowInsets.getSystemWindowInsetLeft(), 0, windowInsets.getSystemWindowInsetRight(), 0,
-                        0, 0, 0, getResources().getDimensionPixelSize(R.dimen.exo_styled_progress_margin_bottom) + progressBarMarginBottom);
+                Utils.setViewParams(findViewById(R.id.exo_progress), 0, 0, 0, 0,
+                        Utils.dpToPx(28) + marginLeft, 0, Utils.dpToPx(28) + marginRight,
+                        getResources().getDimensionPixelSize(R.dimen.exo_styled_progress_margin_bottom) + progressBarMarginBottom);
 
                 Utils.setViewMargins(findViewById(R.id.exo_error_message), 0, windowInsets.getSystemWindowInsetTop() / 2, 0, getResources().getDimensionPixelSize(R.dimen.exo_error_message_margin_bottom) + windowInsets.getSystemWindowInsetBottom() / 2);
 
@@ -631,20 +609,29 @@ public class PlayerActivity extends Activity {
         updateButtons(false);
 
         final LinearLayout exoRightGroup = (LinearLayout) findViewById(R.id.exo_right_group);
-        exoRightGroup.addView(buttonAspectRatio);
+        LinearLayout.LayoutParams aspectParams = new LinearLayout.LayoutParams(Utils.dpToPx(48), Utils.dpToPx(48));
+        aspectParams.setMarginStart(Utils.dpToPx(8));
+        aspectParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+        exoRightGroup.addView(buttonAspectRatio, aspectParams);
 
-        ImageButton exoRewButton = (ImageButton) findViewById(R.id.exo_rew);
+        exoSubtitleButton = findViewById(R.id.exo_subtitle);
+        exoMute = findViewById(R.id.exo_mute);
+        exoMute.setOnClickListener(view -> toggleMute());
+        syncBarIcons();
+
+        exoRewButton = (ImageButton) findViewById(R.id.exo_rew);
         exoRewButton.setOnClickListener(v -> {
             if (player != null) player.seekTo(Math.max(0L, player.getCurrentPosition() - 10000L));
         });
 
-        ImageButton exoFfwdButton = (ImageButton) findViewById(R.id.exo_ffwd);
+        exoFfwdButton = (ImageButton) findViewById(R.id.exo_ffwd);
         exoFfwdButton.setOnClickListener(v -> {
             if (player != null) player.seekTo(player.getCurrentPosition() + 10000L);
         });
 
-        ImageButton exoSpeedButton = (ImageButton) findViewById(R.id.exo_speed);
+        exoSpeedButton = (ImageButton) findViewById(R.id.exo_speed);
         exoSpeedButton.setOnClickListener(v -> showSpeedMenu());
+        syncBarIcons();
 
         speedBoost.attach();
         playerView.setControllerVisibilityListener(new PlayerView.ControllerVisibilityListener() {
@@ -663,8 +650,10 @@ public class PlayerActivity extends Activity {
                 }
 
                 // https://developer.android.com/training/system-ui/immersive
-                Utils.toggleSystemUi(PlayerActivity.this, playerView, visibility == View.VISIBLE);
+                // System bars stay hidden while the player is open; an edge swipe reveals them.
+                Utils.toggleSystemUi(PlayerActivity.this, playerView, false);
                 if (visibility == View.VISIBLE) {
+                    syncBarIcons();
                     // Because when using dpad controls, focus resets to first item in bottom controls bar
                     findViewById(R.id.exo_play_pause).requestFocus();
                 }
@@ -1418,11 +1407,18 @@ public class PlayerActivity extends Activity {
         if (durationView != null) durationView.setPlayer(null);
         }
         titleView.setVisibility(View.GONE);
+        muted = false;
+        updateMuteIcon();
         speedBoost = new SpeedBoost(this);
         updateButtons(false);
     }
 
     private class PlayerListener implements Player.Listener {
+        @Override
+        public void onEvents(Player player, Player.Events events) {
+            syncBarIcons();
+        }
+
         @Override
         public void onAudioSessionIdChanged(int audioSessionId) {
             try {
@@ -2219,6 +2215,43 @@ public class PlayerActivity extends Activity {
         }
     }
 
+    private void toggleMute() {
+        if (player == null) {
+            return;
+        }
+        muted = !muted;
+        player.setVolume(muted ? 0f : 1f);
+        updateMuteIcon();
+        resetHideCallbacks();
+    }
+
+    private void updateMuteIcon() {
+        if (exoMute != null) {
+            exoMute.setImageResource(muted ? R.drawable.ic_p_speaker_off : R.drawable.ic_p_speaker);
+        }
+    }
+
+    /** Keeps the reference artwork for buttons media3 repaints itself. */
+    private void syncBarIcons() {
+        if (exoSubtitleButton != null) {
+            exoSubtitleButton.setImageResource(R.drawable.ic_p_subtitles);
+        }
+        if (exoRewButton != null) {
+            exoRewButton.setImageResource(R.drawable.ic_p_rew10);
+        }
+        if (exoFfwdButton != null) {
+            exoFfwdButton.setImageResource(R.drawable.ic_p_fwd10);
+        }
+        if (exoSpeedButton != null) {
+            exoSpeedButton.setImageResource(R.drawable.ic_p_speed);
+        }
+        if (exoPlayPause != null) {
+            boolean playing = player != null && player.isPlaying();
+            exoPlayPause.setImageResource(playing ? R.drawable.ic_p_pause : R.drawable.ic_p_play);
+        }
+        updateMuteIcon();
+    }
+
     void updateButtons(final boolean enable) {
         if (buttonPiP != null) {
             Utils.setButtonEnabled(this, buttonPiP, enable);
@@ -2288,11 +2321,7 @@ public class PlayerActivity extends Activity {
     }
 
     private void updatebuttonAspectRatioIcon() {
-        if (playerView.getResizeMode() == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) {
-            buttonAspectRatio.setImageResource(R.drawable.ic_fit_screen_24dp);
-        } else {
-            buttonAspectRatio.setImageResource(R.drawable.ic_aspect_ratio_24dp);
-        }
+        buttonAspectRatio.setImageResource(R.drawable.ic_p_aspect);
     }
 
     private void updateButtonRotation() {
