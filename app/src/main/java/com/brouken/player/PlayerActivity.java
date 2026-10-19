@@ -170,6 +170,8 @@ public class PlayerActivity extends Activity {
     private ImageButton exoRewButton;
     private ImageButton exoFfwdButton;
     private ImageButton exoSpeedButton;
+    private android.graphics.drawable.Drawable speedIcon;
+    private android.graphics.drawable.Drawable aspectIcon;
     private boolean muted;
     private ProgressBar loadingProgressBar;
     private PlayerControlView controlView;
@@ -331,6 +333,9 @@ public class PlayerActivity extends Activity {
         coordinatorLayout = findViewById(R.id.coordinatorLayout);
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         playerView = findViewById(R.id.video_view);
+        final float iconDensity = getResources().getDisplayMetrics().density;
+        speedIcon = new PlayerIconDrawable(PlayerIconDrawable.SPEED, iconDensity);
+        aspectIcon = new PlayerIconDrawable(PlayerIconDrawable.ASPECT, iconDensity);
         exoPlayPause = findViewById(R.id.exo_play_pause);
         loadingProgressBar = findViewById(R.id.loading);
         durationView = (RemainingTimeView) findViewById(R.id.exo_duration);
@@ -422,9 +427,7 @@ public class PlayerActivity extends Activity {
         buttonAspectRatio.setContentDescription(getString(R.string.button_crop));
         buttonAspectRatio.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
         buttonAspectRatio.setPadding(Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12));
-        final TypedValue aspectBackground = new TypedValue();
-        getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, aspectBackground, true);
-        buttonAspectRatio.setBackgroundResource(aspectBackground.resourceId);
+        buttonAspectRatio.setBackground(null);
         updatebuttonAspectRatioIcon();
         buttonAspectRatio.setOnClickListener(view -> {
             playerView.setScale(1.f);
@@ -2243,7 +2246,7 @@ public class PlayerActivity extends Activity {
             exoFfwdButton.setImageResource(R.drawable.ic_p_fwd10);
         }
         if (exoSpeedButton != null) {
-            exoSpeedButton.setImageResource(R.drawable.ic_p_speed);
+            exoSpeedButton.setImageDrawable(speedIcon);
         }
         if (exoPlayPause != null) {
             boolean playing = player != null && player.isPlaying();
@@ -2303,25 +2306,21 @@ public class PlayerActivity extends Activity {
 
     private void showSpeedMenu() {
         if (player == null) return;
-        final float[] speeds = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.0f};
-        String[] labels = new String[speeds.length];
-        float current = player.getPlaybackParameters().speed;
-        int checked = 0;
-        for (int i = 0; i < speeds.length; i++) {
-            labels[i] = speeds[i] + "x";
-            if (Math.abs(speeds[i] - current) < 0.01f) checked = i;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("Speed")
-                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
-                    if (player != null) player.setPlaybackSpeed(speeds[which]);
-                    dialog.dismiss();
-                })
-                .show();
+        playerView.showController();
+        final float current = player.getPlaybackParameters().speed;
+        SpeedSheet sheet = new SpeedSheet(this, current, speed -> {
+            if (player != null) {
+                player.setPlaybackSpeed(speed);
+            }
+        });
+        sheet.setOnDismissListener(dialog -> resetHideCallbacks());
+        sheet.show();
     }
 
     private void updatebuttonAspectRatioIcon() {
-        buttonAspectRatio.setImageResource(R.drawable.ic_p_aspect);
+        if (buttonAspectRatio != null) {
+            buttonAspectRatio.setImageDrawable(aspectIcon);
+        }
     }
 
     private void updateButtonRotation() {
