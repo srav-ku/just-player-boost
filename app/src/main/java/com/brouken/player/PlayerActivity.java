@@ -1245,6 +1245,9 @@ public class PlayerActivity extends Activity {
 
         youTubeOverlay.player(player);
         playerView.setPlayer(player);
+        if (exoSubtitleButton != null) {
+            exoSubtitleButton.setOnClickListener(view -> showSubtitleSheet());
+        }
 
         if (mediaSession != null) {
             mediaSession.release();
@@ -2315,6 +2318,68 @@ public class PlayerActivity extends Activity {
         });
         sheet.setOnDismissListener(dialog -> resetHideCallbacks());
         sheet.show();
+    }
+
+    private void showSubtitleSheet() {
+        if (player == null) {
+            return;
+        }
+        final List<String> labels = new ArrayList<>();
+        final List<Tracks.Group> groups = new ArrayList<>();
+        final List<Integer> indexes = new ArrayList<>();
+        labels.add("Off");
+        int selected = 0;
+        for (Tracks.Group group : player.getCurrentTracks().getGroups()) {
+            if (group.getType() != C.TRACK_TYPE_TEXT) {
+                continue;
+            }
+            for (int i = 0; i < group.length; i++) {
+                if (!group.isTrackSupported(i)) {
+                    continue;
+                }
+                final Format format = group.getTrackFormat(i);
+                labels.add(subtitleLabel(format, labels.size()));
+                groups.add(group);
+                indexes.add(i);
+                if (group.isTrackSelected(i)) {
+                    selected = labels.size() - 1;
+                }
+            }
+        }
+        if (labels.size() == 1) {
+            Utils.showText(playerView, "No subtitles in this video");
+            return;
+        }
+        playerView.showController();
+        new TrackSheet(this, "Subtitles", labels, selected, which -> {
+            if (player == null) {
+                return;
+            }
+            TrackSelectionParameters.Builder builder = player.getTrackSelectionParameters().buildUpon();
+            builder.clearOverridesOfType(C.TRACK_TYPE_TEXT);
+            if (which == 0) {
+                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true);
+            } else {
+                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false);
+                builder.addOverride(new TrackSelectionOverride(
+                        groups.get(which - 1).getMediaTrackGroup(), indexes.get(which - 1)));
+            }
+            player.setTrackSelectionParameters(builder.build());
+        }).show();
+    }
+
+    private static String subtitleLabel(Format format, int position) {
+        if (format.label != null && !format.label.isEmpty()) {
+            return format.label;
+        }
+        if (format.language != null && !format.language.isEmpty()) {
+            final String language = new Locale(format.language).getDisplayLanguage();
+            if (language != null && !language.isEmpty() && !language.equals(format.language)) {
+                return language;
+            }
+            return format.language;
+        }
+        return "Track " + position;
     }
 
     private void updatebuttonAspectRatioIcon() {

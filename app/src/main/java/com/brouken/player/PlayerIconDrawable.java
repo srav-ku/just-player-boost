@@ -62,10 +62,11 @@ public class PlayerIconDrawable extends Drawable {
         if (type == SPEED) {
             oval.set(1.8f, 3.5f, 22.2f, 20.5f);
             paint.setStrokeWidth(1.9f);
-            canvas.drawArc(oval, 18f, 306f, false, paint);
+            // open the dial exactly where the needle points (upper right)
+            canvas.drawArc(oval, 345f, 300f, false, paint);
 
             paint.setStrokeWidth(2.1f);
-            canvas.drawLine(12f, 12f, 19.2f, 5.5f, paint);
+            canvas.drawLine(12f, 12f, 18.6f, 6.4f, paint);
 
             paint.setStyle(Paint.Style.FILL);
             canvas.drawCircle(12f, 12f, 1.15f, paint);
