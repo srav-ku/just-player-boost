@@ -84,6 +84,16 @@
           android:src="@drawable/ic_p_subtitles"
           android:contentDescription="Subtitles" />
 
+      <ImageButton android:id="@+id/exo_audio"
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:layout_marginStart="8dp"
+          android:background="@null"
+          android:scaleType="fitCenter"
+          android:padding="12dp"
+          android:src="@drawable/ic_p_audio"
+          android:contentDescription="Audio tracks" />
+
       <ImageButton android:id="@+id/exo_mute"
           android:layout_width="48dp"
           android:layout_height="48dp"
@@ -203,8 +213,8 @@
       app:scrubber_enabled_size="@dimen/exo_styled_progress_enabled_thumb_size"
       app:scrubber_dragged_size="@dimen/exo_styled_progress_dragged_thumb_size"
       app:ad_marker_width="@dimen/marker_width"
-      app:played_color="#FFFFFFFF"
-      app:scrubber_color="#FFFFFFFF"
+      app:played_color="@color/boost_accent"
+      app:scrubber_color="@color/boost_accent"
       app:buffered_color="@color/progress_buffered"
       app:unplayed_color="@color/progress_unplayed"
       app:ad_marker_color="@android:color/transparent"

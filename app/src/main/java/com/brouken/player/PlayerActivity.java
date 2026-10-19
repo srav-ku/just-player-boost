@@ -166,6 +166,7 @@ public class PlayerActivity extends Activity {
     private ImageButton exoPlayPause;
     private RemainingTimeView durationView;
     private ImageButton exoSubtitleButton;
+    private ImageButton exoAudioButton;
     private ImageButton exoMute;
     private ImageButton exoRewButton;
     private ImageButton exoFfwdButton;
@@ -620,6 +621,8 @@ public class PlayerActivity extends Activity {
         exoSubtitleButton = findViewById(R.id.exo_subtitle);
         exoMute = findViewById(R.id.exo_mute);
         exoMute.setOnClickListener(view -> toggleMute());
+        exoAudioButton = findViewById(R.id.exo_audio);
+        exoAudioButton.setOnClickListener(view -> showAudioSheet());
         syncBarIcons();
 
         exoRewButton = (ImageButton) findViewById(R.id.exo_rew);
@@ -1266,12 +1269,8 @@ public class PlayerActivity extends Activity {
         locked = false;
 
         if (haveMedia) {
-            if (isNetworkUri) {
-                timeBar.setBufferedColor(DefaultTimeBar.DEFAULT_BUFFERED_COLOR);
-            } else {
-                // https://github.com/google/ExoPlayer/issues/5765
-                timeBar.setBufferedColor(0x33FFFFFF);
-            }
+            // Buffered range: a light tint of the violet played color, per the Stremio theme
+            timeBar.setBufferedColor(0x55B7ABFF);
 
             playerView.setResizeMode(mPrefs.resizeMode);
 
@@ -2318,6 +2317,69 @@ public class PlayerActivity extends Activity {
         });
         sheet.setOnDismissListener(dialog -> resetHideCallbacks());
         sheet.show();
+    }
+
+    private void showAudioSheet() {
+        if (player == null) {
+            return;
+        }
+        final List<String> labels = new ArrayList<>();
+        final List<Tracks.Group> groups = new ArrayList<>();
+        final List<Integer> indexes = new ArrayList<>();
+        int selected = -1;
+        for (Tracks.Group group : player.getCurrentTracks().getGroups()) {
+            if (group.getType() != C.TRACK_TYPE_AUDIO) {
+                continue;
+            }
+            for (int i = 0; i < group.length; i++) {
+                if (!group.isTrackSupported(i)) {
+                    continue;
+                }
+                labels.add(audioLabel(group.getTrackFormat(i), labels.size()));
+                groups.add(group);
+                indexes.add(i);
+                if (group.isTrackSelected(i)) {
+                    selected = labels.size() - 1;
+                }
+            }
+        }
+        if (labels.isEmpty()) {
+            Utils.showText(playerView, "No audio tracks found");
+            return;
+        }
+        playerView.showController();
+        new TrackSheet(this, "Audio", labels, Math.max(0, selected), which -> {
+            if (player == null) {
+                return;
+            }
+            TrackSelectionParameters.Builder builder = player.getTrackSelectionParameters().buildUpon();
+            builder.clearOverridesOfType(C.TRACK_TYPE_AUDIO);
+            builder.addOverride(new TrackSelectionOverride(
+                    groups.get(which).getMediaTrackGroup(), indexes.get(which)));
+            player.setTrackSelectionParameters(builder.build());
+        }).show();
+    }
+
+    private static String audioLabel(Format format, int position) {
+        final StringBuilder label = new StringBuilder();
+        String language = format.label;
+        if (language == null || language.isEmpty()) {
+            language = format.language != null && !format.language.isEmpty()
+                    ? new Locale(format.language).getDisplayLanguage()
+                    : "Track " + (position + 1);
+        }
+        label.append(language);
+        if (format.channelCount > 2) {
+            label.append("  ·  ").append(format.channelCount).append("ch");
+        } else if (format.channelCount == 2) {
+            label.append("  ·  Stereo");
+        } else if (format.channelCount == 1) {
+            label.append("  ·  Mono");
+        }
+        if (format.codecs != null && !format.codecs.isEmpty()) {
+            label.append("  ·  ").append(format.codecs.toUpperCase(Locale.US));
+        }
+        return label.toString();
     }
 
     private void showSubtitleSheet() {
