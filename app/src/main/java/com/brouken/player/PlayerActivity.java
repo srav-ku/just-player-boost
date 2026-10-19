@@ -157,6 +157,7 @@ public class PlayerActivity extends Activity {
 
     private CoordinatorLayout coordinatorLayout;
     private TextView titleView;
+    private ImageButton buttonTopBack;
     private ImageButton buttonOpen;
     private ImageButton buttonPiP;
     private ImageButton buttonAspectRatio;
@@ -220,7 +221,8 @@ public class PlayerActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         // Rotate ASAP, before super/inflating to avoid glitches with activity launch animation
         mPrefs = new Prefs(this);
-        Utils.setOrientation(this, mPrefs.orientation);
+        // Forced landscape player: always sensor landscape, no orientation modes
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
         super.onCreate(savedInstanceState);
         if (Build.VERSION.SDK_INT == 28 && Build.MANUFACTURER.equalsIgnoreCase("xiaomi") &&
@@ -446,16 +448,25 @@ public class PlayerActivity extends Activity {
         final int titleViewPaddingVertical = getResources().getDimensionPixelOffset(R.dimen.exo_styled_bottom_bar_time_padding);
         FrameLayout centerView = playerView.findViewById(R.id.exo_controls_background);
         titleView = new TextView(this);
-        titleView.setBackgroundResource(R.color.ui_controls_background);
-        titleView.setTextColor(Color.WHITE);
+        titleView.setTextColor(Color.argb(0xF2, 0xFF, 0xFF, 0xFF));
+        titleView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         titleView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        titleView.setPadding(titleViewPaddingHorizontal, titleViewPaddingVertical, titleViewPaddingHorizontal, titleViewPaddingVertical);
-        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        titleView.setPadding(titleViewPaddingHorizontal + Utils.dpToPx(52), titleViewPaddingVertical, titleViewPaddingHorizontal, titleViewPaddingVertical);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         titleView.setVisibility(View.GONE);
         titleView.setMaxLines(1);
         titleView.setEllipsize(TextUtils.TruncateAt.END);
         titleView.setTextDirection(View.TEXT_DIRECTION_LOCALE);
         centerView.addView(titleView);
+
+        buttonTopBack = new ImageButton(this, null, 0, R.style.ExoStyledControls_Button_Bottom);
+        buttonTopBack.setImageResource(R.drawable.ic_top_back);
+        buttonTopBack.setImageTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+        buttonTopBack.setContentDescription("Back");
+        buttonTopBack.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.TOP | android.view.Gravity.START));
+        buttonTopBack.setOnClickListener(view -> onBackPressed());
+        centerView.addView(buttonTopBack);
 
         titleView.setOnLongClickListener(view -> {
             // Prevent FileUriExposedException
@@ -481,6 +492,12 @@ public class PlayerActivity extends Activity {
         }
 
         controlView = playerView.findViewById(R.id.exo_controller);
+
+        ((TextView) findViewById(R.id.exo_position)).setFontFeatureSettings("tnum");
+        TextView exoDurationView = findViewById(R.id.exo_duration);
+        exoDurationView.setFontFeatureSettings("tnum");
+        exoDurationView.setTextColor(Color.argb(0x8C, 0xFF, 0xFF, 0xFF));
+
         controlView.setOnApplyWindowInsetsListener((view, windowInsets) -> {
             if (windowInsets != null) {
                 if (Build.VERSION.SDK_INT >= 31) {
@@ -520,7 +537,7 @@ public class PlayerActivity extends Activity {
                     final int right = windowInsets.getInsets(WindowInsets.Type.navigationBars()).right;
 
                     final View exoTop = findViewById(R.id.exo_top);
-                    exoTop.getLayoutParams().height = windowInsets.getSystemWindowInsetTop();
+                    exoTop.getLayoutParams().height = Math.max(windowInsets.getSystemWindowInsetTop(), Utils.dpToPx(130));
                     Utils.setViewMargins(exoTop, left, 0, right, 0);
 
                     final FrameLayout exoBottomBar = findViewById(R.id.exo_bottom_bar);
@@ -537,8 +554,11 @@ public class PlayerActivity extends Activity {
                     view.setPadding(0, windowInsets.getSystemWindowInsetTop(),0, windowInsets.getSystemWindowInsetBottom());
                 }
 
-                Utils.setViewParams(titleView, paddingLeft + titleViewPaddingHorizontal, titleViewPaddingVertical, paddingRight + titleViewPaddingHorizontal, titleViewPaddingVertical,
+                Utils.setViewParams(titleView, paddingLeft + titleViewPaddingHorizontal + Utils.dpToPx(52), titleViewPaddingVertical, paddingRight + titleViewPaddingHorizontal, titleViewPaddingVertical,
                         marginLeft, windowInsets.getSystemWindowInsetTop(), marginRight, 0);
+                if (buttonTopBack != null) {
+                    Utils.setViewMargins(buttonTopBack, marginLeft, windowInsets.getSystemWindowInsetTop(), 0, 0);
+                }
 
                 Utils.setViewParams(findViewById(R.id.exo_bottom_bar), paddingLeft, 0, paddingRight, bottomBarPaddingBottom,
                         marginLeft, 0, marginRight, 0);
@@ -618,18 +638,8 @@ public class PlayerActivity extends Activity {
         final HorizontalScrollView horizontalScrollView = (HorizontalScrollView) getLayoutInflater().inflate(R.layout.controls, null);
         final LinearLayout controls = horizontalScrollView.findViewById(R.id.controls);
 
-        controls.addView(buttonOpen);
         controls.addView(exoSubtitle);
         controls.addView(buttonAspectRatio);
-        if (Utils.isPiPSupported(this) && buttonPiP != null) {
-            controls.addView(buttonPiP);
-        }
-        if (mPrefs.repeatToggle) {
-            controls.addView(exoRepeat);
-        }
-        if (!isTvBox) {
-            controls.addView(buttonRotation);
-        }
         controls.addView(exoSettings);
 
         exoBasicControls.addView(horizontalScrollView);
@@ -662,26 +672,7 @@ public class PlayerActivity extends Activity {
                 }
 
                 if (controllerVisible && playerView.isControllerFullyVisible()) {
-                    if (mPrefs.firstRun) {
-                        TapTargetView.showFor(PlayerActivity.this,
-                                TapTarget.forView(buttonOpen, getString(R.string.onboarding_open_title), getString(R.string.onboarding_open_description))
-                                        .outerCircleColor(R.color.green)
-                                        .targetCircleColor(R.color.white)
-                                        .titleTextSize(22)
-                                        .titleTextColor(R.color.white)
-                                        .descriptionTextSize(14)
-                                        .cancelable(true),
-                                new TapTargetView.Listener() {
-                                    @Override
-                                    public void onTargetClick(TapTargetView view) {
-                                        super.onTargetClick(view);
-                                        buttonOpen.performClick();
-                                    }
-                                });
-                        // TODO: Explain gestures?
-                        //  "Use vertical and horizontal gestures to change brightness, volume and seek in video"
-                        mPrefs.markFirstRun();
-                    }
+                    // onboarding removed: open-file button no longer on the bar
                     if (errorToShow != null) {
                         showError(errorToShow);
                         errorToShow = null;
@@ -1493,23 +1484,10 @@ public class PlayerActivity extends Activity {
                 if (videoLoading) {
                     videoLoading = false;
 
-                    if (mPrefs.orientation == Utils.Orientation.UNSPECIFIED) {
-                        mPrefs.orientation = Utils.getNextOrientation(mPrefs.orientation);
-                        Utils.setOrientation(PlayerActivity.this, mPrefs.orientation);
-                    }
-
+                    // Forced landscape: no video-based orientation switching
                     final Format format = player.getVideoFormat();
 
                     if (format != null) {
-                        if (!isTvBox && mPrefs.orientation == Utils.Orientation.VIDEO) {
-                            if (Utils.isPortrait(format)) {
-                                PlayerActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-                            } else {
-                                PlayerActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-                            }
-                            updateButtonRotation();
-                        }
-
                         updateSubtitleViewMargin(format);
                     }
 

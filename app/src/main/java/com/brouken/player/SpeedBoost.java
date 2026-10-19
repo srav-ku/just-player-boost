@@ -162,7 +162,7 @@ public class SpeedBoost {
         if (playerView == null) return;
         pill = new TextView(activity);
         pill.setTypeface(Typeface.DEFAULT_BOLD);
-        pill.setTextColor(Color.WHITE);
+        pill.setTextColor(0xFFB7ABFF);
         pill.setTextSize(15);
         int hpad = dp(14), vpad = dp(7);
         pill.setPadding(hpad, vpad, hpad, vpad);
