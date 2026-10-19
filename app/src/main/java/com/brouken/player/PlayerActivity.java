@@ -630,7 +630,6 @@ public class PlayerActivity extends Activity {
         if (!isTvBox) {
             controls.addView(buttonRotation);
         }
-        controls.addView(speedBoost.createButton());
         controls.addView(exoSettings);
 
         exoBasicControls.addView(horizontalScrollView);
@@ -639,6 +638,7 @@ public class PlayerActivity extends Activity {
             horizontalScrollView.setOnScrollChangeListener((view, i, i1, i2, i3) -> resetHideCallbacks());
         }
 
+        speedBoost.attach();
         playerView.setControllerVisibilityListener(new PlayerView.ControllerVisibilityListener() {
             @Override
             public void onVisibilityChanged(int visibility) {

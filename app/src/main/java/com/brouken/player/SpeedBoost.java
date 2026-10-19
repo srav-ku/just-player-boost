@@ -13,7 +13,6 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.OptIn;
@@ -21,114 +20,117 @@ import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 
 /**
- * SpeedBoost - hold the button for a temporary playback speed boost,
- * drag vertically while holding to smoothly change the boost level.
- * Quick tap toggles a pinned boost. Level is remembered.
+ * SpeedBoost - MX Player style: long-press anywhere on the video surface to
+ * temporarily boost playback speed. While holding, drag right to increase and
+ * left to decrease the boost smoothly. Release returns to normal speed.
+ * The last boost level is remembered for the next hold.
  */
 @OptIn(markerClass = UnstableApi.class)
 public class SpeedBoost {
 
     private static final float MIN_SPEED = 2.0f;
     private static final float MAX_SPEED = 5.0f;
-    private static final float SPEED_PER_PX = 0.005f;   // ~600px drag covers the full range
-    private static final long TAP_MS = 280;
+    private static final float SPEED_PER_PX = 0.005f;   // ~600px drag covers full range
+    private static final long LONG_PRESS_MS = 300;
     private static final int VIOLET = 0xFFB7ABFF;
 
     private final PlayerActivity activity;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private ImageButton button;
     private TextView pill;
     private boolean pillAdded;
 
     private float level = MIN_SPEED;
     private boolean boosted = false;
-    private boolean pinned = false;
     private float restoreSpeed = 1f;
 
-    private float downY;
-    private long downAt;
+    private boolean armed = false;          // long-press pending
+    private float downX, downY, lastX;
     private float dragBase;
-    private boolean dragging;
+    private int slop;
 
     private Player.Listener boostListener;
 
-    private final Runnable hidePill = () -> hidePill();
+    private final Runnable fireBoost = this::fireBoost;
+    private final Runnable hidePill = this::hidePill;
 
     public SpeedBoost(PlayerActivity activity) {
         this.activity = activity;
-        SharedPreferences sp = prefs();
+        SharedPreferences sp = activity.getSharedPreferences("speed_boost", Context.MODE_PRIVATE);
         level = Math.min(MAX_SPEED, Math.max(MIN_SPEED, sp.getFloat("level", MIN_SPEED)));
+        slop = ViewConfiguration.get(activity).getScaledTouchSlop();
     }
 
-    private SharedPreferences prefs() {
-        return activity.getSharedPreferences("speed_boost", Context.MODE_PRIVATE);
-    }
-
-    public ImageButton createButton() {
-        button = new ImageButton(activity, null, 0, R.style.ExoStyledControls_Button_Bottom);
-        button.setImageResource(R.drawable.ic_boost);
-        button.setId(View.generateViewId());
-        button.setContentDescription("Speed boost");
-        button.setOnTouchListener(onTouch());
-        if (pinned) applyTint();
-        return button;
+    /** Observe touches on the video surface. Never consumes events before the
+     *  boost fires, so normal taps / double-tap seek / swipes keep working.
+     *  Once boosting, events are consumed so other gestures stay quiet. */
+    public void attach() {
+        View surface = activity.findViewById(R.id.video_view);
+        if (surface == null) return;
+        surface.setOnTouchListener(onTouch());
     }
 
     private View.OnTouchListener onTouch() {
         return (v, ev) -> {
-            if (PlayerActivity.player == null) return false;
             switch (ev.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
+                    if (ev.getPointerCount() != 1) return false;
+                    downX = lastX = ev.getRawX();
                     downY = ev.getRawY();
-                    downAt = System.currentTimeMillis();
-                    dragging = false;
-                    if (!boosted && !pinned) startBoost(level);
-                    return true;
+                    armed = true;
+                    handler.postDelayed(fireBoost, LONG_PRESS_MS);
+                    return false;
                 case MotionEvent.ACTION_MOVE:
-                    float dy = downY - ev.getRawY();
-                    if (!dragging && Math.abs(dy) > ViewConfiguration.get(activity).getScaledTouchSlop()) {
-                        dragging = true;
-                        dragBase = level;
+                    if (boosted) {
+                        float dx = ev.getRawX() - downX;
+                        setLevel(dragBase + dx * SPEED_PER_PX);
+                        return true;
                     }
-                    if (dragging) {
-                        setLevel(dragBase + dy * SPEED_PER_PX);
+                    if (armed) {
+                        float mx = ev.getRawX() - downX;
+                        float my = ev.getRawY() - downY;
+                        if (Math.hypot(mx, my) > slop) {
+                            armed = false;
+                            handler.removeCallbacks(fireBoost);
+                        }
                     }
-                    return true;
+                    return false;
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    if (boosted) return true;
+                    armed = false;
+                    handler.removeCallbacks(fireBoost);
+                    return false;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    boolean quickTap = !dragging && (System.currentTimeMillis() - downAt) < TAP_MS;
-                    if (quickTap) {
-                        // tap: toggle pinned boost
-                        if (boosted) {
-                            stopBoost();
-                            pinned = false;
-                        } else {
-                            pinned = true;
-                            startBoost(level);
-                        }
-                    } else {
-                        if (pinned && !boosted) {
-                            // was pinned, held again to adjust: re-boost handled below
-                        }
-                        if (boosted && !pinned) stopBoost();
-                        if (dragging) saveLevel();
+                    if (boosted) {
+                        stopBoost();
+                        saveLevel();
+                        return true;
                     }
-                    dragging = false;
-                    return true;
+                    armed = false;
+                    handler.removeCallbacks(fireBoost);
+                    return false;
             }
             return false;
         };
+    }
+
+    private void fireBoost() {
+        Player p = PlayerActivity.player;
+        if (!armed || p == null || !p.isPlaying()) return;
+        armed = false;
+        startBoost(level);
     }
 
     private void startBoost(float speed) {
         Player p = PlayerActivity.player;
         if (p == null) return;
         restoreSpeed = p.getPlaybackParameters().speed;
+        dragBase = speed;
         p.setPlaybackSpeed(speed);
         boosted = true;
+        lastX = downX;
         showPill();
-        applyTint();
         attachListener(p);
     }
 
@@ -136,7 +138,6 @@ public class SpeedBoost {
         Player p = PlayerActivity.player;
         if (p != null && boosted) p.setPlaybackSpeed(restoreSpeed);
         boosted = false;
-        applyTint();
         detachListener();
         handler.removeCallbacks(hidePill);
         handler.postDelayed(hidePill, 350);
@@ -151,7 +152,8 @@ public class SpeedBoost {
     }
 
     private void saveLevel() {
-        prefs().edit().putFloat("level", level).apply();
+        activity.getSharedPreferences("speed_boost", Context.MODE_PRIVATE)
+                .edit().putFloat("level", level).apply();
     }
 
     private void attachListener(Player p) {
@@ -159,15 +161,12 @@ public class SpeedBoost {
         boostListener = new Player.Listener() {
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
-                if (!isPlaying && boosted && !pinned) {
-                    stopBoost();
-                }
+                if (!isPlaying && boosted) stopBoost();
             }
             @Override
             public void onPlaybackStateChanged(int state) {
                 if ((state == Player.STATE_ENDED || state == Player.STATE_IDLE) && boosted) {
                     stopBoost();
-                    pinned = false;
                 }
             }
         };
@@ -179,12 +178,6 @@ public class SpeedBoost {
             PlayerActivity.player.removeListener(boostListener);
         }
         boostListener = null;
-    }
-
-    private void applyTint() {
-        if (button == null) return;
-        if (boosted || pinned) button.setColorFilter(VIOLET);
-        else button.clearColorFilter();
     }
 
     // ---------------- pill OSD ----------------
