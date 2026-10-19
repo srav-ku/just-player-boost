@@ -329,8 +329,8 @@ public class PlayerActivity extends Activity {
 
         playerView.setShowNextButton(false);
         playerView.setShowPreviousButton(false);
-        playerView.setShowFastForwardButton(false);
-        playerView.setShowRewindButton(false);
+        playerView.setShowFastForwardButton(true);
+        playerView.setShowRewindButton(true);
 
         playerView.setRepeatToggleModes(Player.REPEAT_MODE_ONE);
 
@@ -640,7 +640,6 @@ public class PlayerActivity extends Activity {
 
         controls.addView(exoSubtitle);
         controls.addView(buttonAspectRatio);
-        controls.addView(exoSettings);
 
         exoBasicControls.addView(horizontalScrollView);
 
@@ -720,7 +719,8 @@ public class PlayerActivity extends Activity {
         }
         if (Build.VERSION.SDK_INT >= 31) {
             playerView.removeCallbacks(barsHider);
-            Utils.toggleSystemUi(this, playerView, true);
+            // Keep system bars hidden; user pulls them with an edge swipe when wanted
+            Utils.toggleSystemUi(this, playerView, false);
         }
         initializePlayer();
         updateButtonRotation();
