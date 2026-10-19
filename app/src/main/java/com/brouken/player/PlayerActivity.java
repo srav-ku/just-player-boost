@@ -76,11 +76,13 @@ import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.Tracks;
 import androidx.media3.datasource.DefaultHttpDataSource;
+import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlaybackException;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.RenderersFactory;
 import androidx.media3.exoplayer.SeekParameters;
+import androidx.media3.exoplayer.upstream.DefaultAllocator;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.extractor.DefaultExtractorsFactory;
@@ -1219,6 +1221,22 @@ public class PlayerActivity extends Activity {
         ExoPlayer.Builder playerBuilder = new ExoPlayer.Builder(this, renderersFactory)
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(new DefaultMediaSourceFactory(this, extractorsFactory));
+
+        if (haveMedia && isNetworkUri) {
+            // Streaming precache: pull a big chunk ahead while playing, keep the last
+            // ~2 minutes behind so rewinding is instant, and start fast (no long stall
+            // waiting to fill the buffer before the first frame).
+            playerBuilder.setLoadControl(new DefaultLoadControl.Builder()
+                    .setAllocator(new DefaultAllocator(true, 64 * 1024))
+                    .setBufferDurationsMs(
+                            30_000,   // minBufferMs: keep at least 30s loaded
+                            120_000,  // maxBufferMs: precache up to 2 min ahead
+                            1_500,    // bufferForPlaybackMs: start/resume fast
+                            3_000)    // bufferForPlaybackAfterRebufferMs: quick recovery
+                    .setBackBuffer(120_000, true)  // remember last 2 min for instant rewind
+                    .setTargetBufferBytes(C.LENGTH_UNSET)  // size limit follows time limits
+                    .build());
+        }
 
         if (haveMedia && isNetworkUri) {
             if (mPrefs.mediaUri.getScheme().toLowerCase().startsWith("http")) {
