@@ -2,7 +2,7 @@ name: Boost APK
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
