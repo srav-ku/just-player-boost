@@ -2300,6 +2300,8 @@ public class PlayerActivity extends Activity {
     private void syncBarIcons() {
         if (exoSubtitleButton != null) {
             exoSubtitleButton.setImageResource(R.drawable.ic_p_subtitles);
+            exoSubtitleButton.setEnabled(true);
+            exoSubtitleButton.setAlpha(1f);
         }
         if (exoRewButton != null) {
             exoRewButton.setImageDrawable(rewIcon);
@@ -2570,12 +2572,14 @@ public class PlayerActivity extends Activity {
                 }
             }
         }
-        if (labels.size() == 1) {
-            Utils.showText(playerView, "No subtitles in this video");
-            return;
-        }
+        final int onlineIndex = labels.size();
+        labels.add("Search online (OpenSubtitles)");
         playerView.showController();
         new TrackSheet(this, "Subtitles", labels, selected, which -> {
+            if (which == onlineIndex) {
+                startOnlineSearch();
+                return;
+            }
             if (player == null) {
                 return;
             }
@@ -2600,6 +2604,65 @@ public class PlayerActivity extends Activity {
         SubtitleSheet sheet = new SubtitleSheet(this, subtitleStyle, this::applySubtitleStyle);
         sheet.setOnDismissListener(dialog -> resetHideCallbacks());
         sheet.show();
+    }
+
+    private void startOnlineSearch() {
+        if (player == null) {
+            return;
+        }
+        String query = null;
+        if (titleView != null) {
+            query = titleView.getText().toString();
+        }
+        if ((query == null || query.trim().isEmpty()) && mPrefs.mediaUri != null) {
+            query = mPrefs.mediaUri.toString();
+        }
+        Utils.showText(playerView, "Searching subtitles…");
+        OnlineSubtitleSearch.search(query == null ? "" : query, entries -> showOnlineSubtitleResults(entries));
+    }
+
+    private void showOnlineSubtitleResults(java.util.List<OnlineSubtitleSearch.Entry> entries) {
+        if (isFinishing() || entries == null) {
+            return;
+        }
+        if (entries.isEmpty()) {
+            Utils.showText(playerView, "No online subtitles found");
+            return;
+        }
+        final java.util.List<String> labels = new ArrayList<>();
+        for (OnlineSubtitleSearch.Entry entry : entries) {
+            labels.add(entry.label());
+        }
+        playerView.showController();
+        new TrackSheet(this, "Online subtitles (" + entries.size() + ")", labels, -1, which -> {
+            if (which >= 0 && which < entries.size()) {
+                applyOnlineSubtitle(entries.get(which));
+            }
+        }).show();
+    }
+
+    private void applyOnlineSubtitle(OnlineSubtitleSearch.Entry entry) {
+        if (player == null) {
+            return;
+        }
+        try {
+            final MediaItem current = player.getCurrentMediaItem();
+            if (current == null || current.localConfiguration == null) {
+                return;
+            }
+            final long position = player.getCurrentPosition();
+            final java.util.List<MediaItem.SubtitleConfiguration> subs =
+                    new ArrayList<>(current.localConfiguration.subtitleConfigurations);
+            final String label = entry.lang != null && !entry.lang.isEmpty() ? entry.lang : null;
+            subs.add(SubtitleUtils.buildSubtitle(this, Uri.parse(entry.url), label, true));
+            final MediaItem updated = current.buildUpon().setSubtitleConfigurations(subs).build();
+            player.setMediaItem(updated, position);
+            player.prepare();
+            player.play();
+            Utils.showText(playerView, "Subtitle loaded");
+        } catch (Exception e) {
+            Utils.showText(playerView, "Could not load subtitle");
+        }
     }
 
     private static Uri toUri(Object o) {
