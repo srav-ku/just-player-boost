@@ -481,6 +481,10 @@ public class PlayerActivity extends Activity {
         titleView = findViewById(R.id.player_title);
         buttonTopBack = findViewById(R.id.exo_back);
         buttonTopBack.setOnClickListener(view -> onBackPressed());
+        buttonTopBack.setOnLongClickListener(view -> {
+            startActivityForResult(new Intent(this, SettingsActivity.class), REQUEST_SETTINGS);
+            return true;
+        });
 
         titleView.setOnLongClickListener(view -> {
             // Prevent FileUriExposedException
