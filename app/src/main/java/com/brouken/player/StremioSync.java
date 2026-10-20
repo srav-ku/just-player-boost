@@ -166,12 +166,48 @@ public class StremioSync {
                     putBody.put("collection", "libraryItem");
                     putBody.put("changes", new JSONArray().put(item));
                     final String putResponse = http(API + "datastorePut", putBody.toString());
-                    Log.d(TAG, "datastorePut <- " + trim(putResponse) + " at " + (positionMs / 1000) + "s");
+                    Log.d(TAG, "datastorePut <- " + trim(putResponse) + " at " + (positionMs / 1000) + "s timeOffset=" + incoming + "ms duration=" + durationLocal + "ms");
+                    verifyLibrary(videoId);
                 } catch (Exception e) {
                     Log.d(TAG, "push exception: " + e);
                 }
             }
         });
+    }
+
+    private static void verifyLibrary(final String videoId) {
+        try {
+            final JSONObject body = new JSONObject();
+            body.put("authKey", authKey);
+            body.put("collection", "libraryItem");
+            body.put("all", true);
+            final JSONObject json = new JSONObject(http(API + "datastoreGet", body.toString()));
+            final JSONArray items = json.optJSONArray("result");
+            if (items == null) {
+                Log.d(TAG, "verify: no items");
+                return;
+            }
+            int samples = 0;
+            for (int i = 0; i < items.length(); i++) {
+                final JSONObject it = items.optJSONObject(i);
+                if (it == null) {
+                    continue;
+                }
+                final JSONObject st = it.optJSONObject("state");
+                if (st == null) {
+                    continue;
+                }
+                final String vid = st.optString("video_id", "");
+                if (vid.equals(videoId)) {
+                    Log.d(TAG, "verify MATCH " + it.optString("name") + " timeOffset=" + st.optLong("timeOffset", 0) + " duration=" + st.optLong("duration", 0) + " timesWatched=" + st.optLong("timesWatched", 0) + " flagged=" + st.optBoolean("flaggedWatched", false));
+                } else if (samples < 3) {
+                    samples++;
+                    Log.d(TAG, "sample " + it.optString("name") + " type=" + it.optString("type") + " timeOffset=" + st.optLong("timeOffset", 0) + " duration=" + st.optLong("duration", 0));
+                }
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "verify exception: " + e);
+        }
     }
 
     private static String isoNow() {
