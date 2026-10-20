@@ -183,12 +183,9 @@ class Prefs {
         while (positions.size() > 100)
             positions.remove(positions.keySet().toArray()[0]);
 
-        if (persistentMode) {
-            positions.put(mediaUri.toString(), position);
-            savePositions();
-        } else {
-            nonPersitentPosition = position;
-        }
+        positions.put(mediaUri.toString(), position);
+        nonPersitentPosition = position;
+        savePositions();
     }
 
     public void updateBrightness(final int brightness) {
@@ -216,37 +213,44 @@ class Prefs {
 
     private void savePositions() {
         try {
-            FileOutputStream fos = mContext.openFileOutput("positions", Context.MODE_PRIVATE);
-            ObjectOutputStream os = new ObjectOutputStream(fos);
-            os.writeObject(positions);
-            os.close();
-            fos.close();
+            final org.json.JSONObject json = new org.json.JSONObject();
+            for (Object key : positions.keySet()) {
+                json.put(String.valueOf(key), positions.get(key));
+            }
+            mSharedPreferences.edit().putString("positionsJson", json.toString()).apply();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private void loadPositions() {
+        positions = new LinkedHashMap(10);
         try {
-            FileInputStream fis = mContext.openFileInput("positions");
-            ObjectInputStream is = new ObjectInputStream(fis);
-            positions = (LinkedHashMap) is.readObject();
-            is.close();
-            fis.close();
+            final String raw = mSharedPreferences.getString("positionsJson", null);
+            if (raw == null) {
+                return;
+            }
+            final org.json.JSONObject json = new org.json.JSONObject(raw);
+            final java.util.Iterator<String> iterator = json.keys();
+            while (iterator.hasNext()) {
+                final String key = iterator.next();
+                positions.put(key, json.optLong(key));
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            positions = new LinkedHashMap(10);
         }
     }
 
     public long getPosition() {
+        if (mediaUri != null) {
+            Object val = positions.get(mediaUri.toString());
+            if (val != null) {
+                return ((Number) val).longValue();
+            }
+        }
         if (!persistentMode) {
             return nonPersitentPosition;
         }
-
-        Object val = positions.get(mediaUri.toString());
-        if (val != null)
-            return (long) val;
 
         // Return position for uri from limited scope (loaded after using Next action)
         if (ContentResolver.SCHEME_CONTENT.equals(mediaUri.getScheme())) {
