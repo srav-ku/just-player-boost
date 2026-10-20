@@ -83,6 +83,31 @@ public class SettingsActivity extends AppCompatActivity {
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
 
+            Preference stremioLogin = findPreference("stremioLogin");
+            if (stremioLogin != null) {
+                stremioLogin.setOnPreferenceClickListener(preference -> {
+                    final android.content.Context context = requireContext();
+                    final android.content.SharedPreferences sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
+                    final String email = sp.getString("stremioEmail", "");
+                    final String password = sp.getString("stremioPassword", "");
+                    final Preference status = findPreference("stremioStatus");
+                    if (status != null) {
+                        status.setSummary("Signing in…");
+                    }
+                    StremioSync.loginAsync(context, email, password, (ok, message) -> {
+                        if (status != null) {
+                            status.setSummary(ok ? "Connected as " + email : message);
+                        }
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show();
+                    });
+                    return true;
+                });
+            }
+            Preference stremioStatus = findPreference("stremioStatus");
+            if (stremioStatus != null && StremioSync.isLoggedIn(requireContext())) {
+                stremioStatus.setSummary("Connected");
+            }
+
             Preference preferenceAutoPiP = findPreference("autoPiP");
             if (preferenceAutoPiP != null) {
                 preferenceAutoPiP.setEnabled(Utils.isPiPSupported(this.getContext()));

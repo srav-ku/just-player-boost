@@ -764,6 +764,7 @@ public class PlayerActivity extends Activity {
     protected void onPause() {
         super.onPause();
         savePlayer();
+        pushStremioProgress(false);
     }
 
     @Override
@@ -805,6 +806,7 @@ public class PlayerActivity extends Activity {
                     }
                 }
             }
+            pushStremioProgress(true);
             setResult(Activity.RESULT_OK, intent);
         }
 
@@ -1420,6 +1422,24 @@ public class PlayerActivity extends Activity {
             playerView.showController();
             playerView.setControllerShowTimeoutMs(PlayerActivity.CONTROLLER_TIMEOUT);
             player.setPlayWhenReady(true);
+        }
+    }
+
+    private void pushStremioProgress(boolean force) {
+        if (player == null || mPrefs.mediaUri == null || !StremioSync.isLoggedIn(this)) {
+            return;
+        }
+        try {
+            if (player.getPlaybackState() == Player.STATE_IDLE) {
+                return;
+            }
+            final long position = player.getCurrentPosition();
+            final long duration = player.getDuration();
+            final String title = titleView != null && titleView.getText().length() > 0
+                    ? titleView.getText().toString()
+                    : Utils.getFileName(this, mPrefs.mediaUri);
+            StremioSync.pushAsync(this, title, position, duration, force);
+        } catch (Exception ignored) {
         }
     }
 

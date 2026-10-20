@@ -98,4 +98,28 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Stremio sync">
+
+        <EditTextPreference
+            app:key="stremioEmail"
+            app:title="Stremio email"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:key="stremioPassword"
+            app:title="Stremio password"
+            app:useSimpleSummaryProvider="true" />
+
+        <Preference
+            app:key="stremioLogin"
+            app:summary="Signs progress into your Stremio account so other devices resume correctly"
+            app:title="Sign in to Stremio" />
+
+        <Preference
+            app:key="stremioStatus"
+            app:selectable="false"
+            app:summary="Not connected" />
+
+    </PreferenceCategory>
+
 </PreferenceScreen>
