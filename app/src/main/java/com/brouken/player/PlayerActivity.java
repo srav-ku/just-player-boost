@@ -343,8 +343,16 @@ public class PlayerActivity extends Activity {
                             } catch (NumberFormatException ignored) {
                             }
                         }
-                        Log.d("JP_API", "position=" + apiPosition + " returnResult=" + intentReturnResult);
-                        mPrefs.updatePosition(apiPosition);
+                        long savedPosition = 0L;
+                        if (mPrefs.mediaUri != null) {
+                            savedPosition = mPrefs.getPosition();
+                        }
+                        long applyPosition = apiPosition;
+                        if (savedPosition > apiPosition + 15000L) {
+                            applyPosition = savedPosition;
+                        }
+                        Log.d("JP_API", "position incoming=" + apiPosition + " saved=" + savedPosition + " apply=" + applyPosition + " returnResult=" + intentReturnResult);
+                        mPrefs.updatePosition(applyPosition);
                     }
                 }
             }
@@ -788,11 +796,12 @@ public class PlayerActivity extends Activity {
                         intent.putExtra(API_DURATION, (int) player.getDuration());
                     }
                     if (player.isCurrentMediaItemSeekable()) {
-                        if (mPrefs.persistentMode) {
-                            intent.putExtra(API_POSITION, (int) mPrefs.nonPersitentPosition);
-                        } else {
-                            intent.putExtra(API_POSITION, (int) player.getCurrentPosition());
+                        long outPosition = player.getCurrentPosition();
+                        if (outPosition <= 0L) {
+                            outPosition = Math.max(0L, mPrefs.getPosition());
                         }
+                        intent.putExtra(API_POSITION, (int) outPosition);
+                        Log.d("JP_API", "finish: position=" + outPosition + " duration=" + duration);
                     }
                 }
             }
