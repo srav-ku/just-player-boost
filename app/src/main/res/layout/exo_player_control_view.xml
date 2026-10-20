@@ -20,7 +20,7 @@
       android:background="@drawable/scrim_bottom"
       android:layout_gravity="bottom" />
 
-  <!-- Top row: thin chevron + title, aligned with the reference -->
+  <!-- Top row: thin chevron + title -->
   <LinearLayout android:id="@+id/top_bar"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
@@ -28,43 +28,44 @@
       android:layoutDirection="ltr"
       android:orientation="horizontal"
       android:gravity="center_vertical"
-      android:paddingStart="24dp"
-      android:paddingEnd="24dp"
-      android:paddingTop="25dp">
+      android:paddingStart="22dp"
+      android:paddingEnd="22dp"
+      android:paddingTop="22dp">
 
     <ImageButton android:id="@+id/exo_back"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
         android:background="@null"
+        android:stateListAnimator="@null"
         android:scaleType="fitCenter"
-        android:padding="12dp"
+        android:padding="11dp"
         android:src="@drawable/ic_p_back"
         android:contentDescription="Back" />
 
     <TextView android:id="@+id/player_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
+        android:layout_marginStart="8dp"
         android:maxLines="1"
         android:ellipsize="end"
         android:includeFontPadding="false"
         android:fontFamily="sans-serif-medium"
         android:letterSpacing="0.01"
-        android:textSize="17sp"
+        android:textSize="16sp"
         android:textColor="#F2FFFFFF"
         android:textDirection="locale" />
 
   </LinearLayout>
 
-  <!-- Single low control bar: CC | speaker | time ... rew | play | fwd ... speed | aspect -->
+  <!-- Single low control bar: CC | globe | speaker | time ... rew | play | fwd ... speed | aspect -->
   <FrameLayout android:id="@+id/exo_bottom_bar"
       android:layout_width="match_parent"
       android:layout_height="56dp"
       android:layout_gravity="bottom"
-      android:layout_marginBottom="19dp"
+      android:layout_marginBottom="18dp"
       android:background="@android:color/transparent"
-      android:paddingStart="28dp"
-      android:paddingEnd="28dp"
+      android:paddingStart="24dp"
+      android:paddingEnd="24dp"
       android:layoutDirection="ltr">
 
     <LinearLayout android:id="@+id/exo_left_group"
@@ -76,63 +77,71 @@
         android:gravity="center_vertical">
 
       <ImageButton android:id="@+id/exo_subtitle"
-          android:layout_width="48dp"
-          android:layout_height="48dp"
+          android:layout_width="44dp"
+          android:layout_height="44dp"
           android:background="@null"
+          android:stateListAnimator="@null"
           android:scaleType="fitCenter"
-          android:padding="12dp"
+          android:padding="11dp"
           android:src="@drawable/ic_p_subtitles"
           android:contentDescription="Subtitles" />
 
       <ImageButton android:id="@+id/exo_audio"
-          android:layout_width="48dp"
-          android:layout_height="48dp"
-          android:layout_marginStart="8dp"
+          android:layout_width="44dp"
+          android:layout_height="44dp"
+          android:layout_marginStart="2dp"
           android:background="@null"
+          android:stateListAnimator="@null"
           android:scaleType="fitCenter"
-          android:padding="12dp"
+          android:padding="11dp"
           android:src="@drawable/ic_p_audio"
           android:contentDescription="Audio tracks" />
 
-      <ImageButton android:id="@+id/exo_mute"
-          android:layout_width="48dp"
-          android:layout_height="48dp"
-          android:layout_marginStart="8dp"
-          android:background="@null"
-          android:scaleType="fitCenter"
-          android:padding="12dp"
-          android:src="@drawable/ic_p_speaker"
-          android:contentDescription="Mute" />
-
-      <com.brouken.player.PositionTimeView android:id="@+id/exo_position"
+      <LinearLayout android:id="@+id/exo_time_group"
           android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:layout_marginStart="16dp"
-          android:includeFontPadding="false"
+          android:layout_height="match_parent"
+          android:layout_marginStart="18dp"
+          android:orientation="horizontal"
           android:gravity="center_vertical"
-          android:fontFeatureSettings="tnum"
-          android:textSize="14sp"
-          android:textColor="#FFFFFFFF" />
+          android:clickable="true"
+          android:focusable="false"
+          android:background="@null">
 
-      <TextView android:id="@+id/exo_time_separator"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:layout_marginStart="6dp"
-          android:layout_marginEnd="6dp"
-          android:includeFontPadding="false"
-          android:gravity="center_vertical"
-          android:text="/"
-          android:textSize="14sp"
-          android:textColor="#FFFFFFFF" />
+        <com.brouken.player.PositionTimeView android:id="@+id/exo_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical"
+            android:fontFamily="sans-serif-medium"
+            android:fontFeatureSettings="tnum"
+            android:letterSpacing="0.02"
+            android:textSize="13.5sp"
+            android:textColor="#F2FFFFFF" />
 
-      <com.brouken.player.RemainingTimeView android:id="@+id/exo_duration"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:includeFontPadding="false"
-          android:gravity="center_vertical"
-          android:fontFeatureSettings="tnum"
-          android:textSize="14sp"
-          android:textColor="#FFFFFFFF" />
+        <TextView android:id="@+id/exo_time_separator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical"
+            android:fontFamily="sans-serif"
+            android:text="/"
+            android:textSize="13.5sp"
+            android:textColor="#8EFFFFFF" />
+
+        <com.brouken.player.RemainingTimeView android:id="@+id/exo_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:gravity="center_vertical"
+            android:fontFamily="sans-serif-medium"
+            android:fontFeatureSettings="tnum"
+            android:letterSpacing="0.02"
+            android:textSize="13.5sp"
+            android:textColor="#8EFFFFFF" />
+
+      </LinearLayout>
 
     </LinearLayout>
 
@@ -145,30 +154,33 @@
         android:gravity="center_vertical">
 
       <ImageButton android:id="@+id/exo_rew"
-          android:layout_width="48dp"
-          android:layout_height="48dp"
+          android:layout_width="44dp"
+          android:layout_height="44dp"
           android:background="@null"
+          android:stateListAnimator="@null"
           android:scaleType="fitCenter"
-          android:padding="12dp"
+          android:padding="11dp"
           android:src="@drawable/ic_p_rew10"
           android:contentDescription="Rewind 10 seconds" />
 
       <ImageButton android:id="@+id/exo_play_pause"
-          android:layout_width="48dp"
-          android:layout_height="48dp"
-          android:layout_marginStart="28dp"
-          android:layout_marginEnd="28dp"
+          android:layout_width="44dp"
+          android:layout_height="44dp"
+          android:layout_marginStart="26dp"
+          android:layout_marginEnd="26dp"
           android:background="@null"
+          android:stateListAnimator="@null"
           android:scaleType="fitCenter"
-          android:padding="12dp"
+          android:padding="10dp"
           android:contentDescription="Play" />
 
       <ImageButton android:id="@+id/exo_ffwd"
-          android:layout_width="48dp"
-          android:layout_height="48dp"
+          android:layout_width="44dp"
+          android:layout_height="44dp"
           android:background="@null"
+          android:stateListAnimator="@null"
           android:scaleType="fitCenter"
-          android:padding="12dp"
+          android:padding="11dp"
           android:src="@drawable/ic_p_fwd10"
           android:contentDescription="Forward 10 seconds" />
 
@@ -183,11 +195,12 @@
         android:gravity="center_vertical">
 
       <ImageButton android:id="@+id/exo_speed"
-          android:layout_width="48dp"
-          android:layout_height="48dp"
+          android:layout_width="44dp"
+          android:layout_height="44dp"
           android:background="@null"
+          android:stateListAnimator="@null"
           android:scaleType="fitCenter"
-          android:padding="12dp"
+          android:padding="11dp"
           android:src="@drawable/ic_p_speed"
           android:contentDescription="Speed" />
 
@@ -204,8 +217,8 @@
       android:layout_width="match_parent"
       android:layout_height="@dimen/exo_styled_progress_layout_height"
       android:layout_gravity="bottom"
-      android:layout_marginStart="28dp"
-      android:layout_marginEnd="28dp"
+      android:layout_marginStart="24dp"
+      android:layout_marginEnd="24dp"
       android:layout_marginBottom="@dimen/exo_styled_progress_margin_bottom"
       app:bar_height="@dimen/exo_styled_progress_bar_height"
       app:bar_gravity="bottom"

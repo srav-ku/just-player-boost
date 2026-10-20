@@ -1,5 +1,7 @@
 package com.brouken.player;
 
+import android.util.Log;
+
 import static android.content.pm.PackageManager.FEATURE_EXPANDED_PICTURE_IN_PICTURE;
 
 import android.animation.Animator;
@@ -169,12 +171,15 @@ public class PlayerActivity extends Activity {
     private RemainingTimeView durationView;
     private ImageButton exoSubtitleButton;
     private ImageButton exoAudioButton;
-    private ImageButton exoMute;
+
     private ImageButton exoRewButton;
     private ImageButton exoFfwdButton;
     private ImageButton exoSpeedButton;
     private android.graphics.drawable.Drawable speedIcon;
     private android.graphics.drawable.Drawable aspectIcon;
+    private android.graphics.drawable.Drawable rewIcon;
+    private SubtitleStyle subtitleStyle;
+    private android.graphics.drawable.Drawable fwdIcon;
     private boolean muted;
     private ProgressBar loadingProgressBar;
     private PlayerControlView controlView;
@@ -298,23 +303,25 @@ public class PlayerActivity extends Activity {
                 mPrefs.updateMedia(this, uri, type);
 
                 if (bundle != null) {
-                    Uri defaultSub = null;
-                    Parcelable[] subsEnable = bundle.getParcelableArray(API_SUBS_ENABLE);
-                    if (subsEnable != null && subsEnable.length > 0) {
-                        defaultSub = (Uri) subsEnable[0];
-                    }
-
-                    Parcelable[] subs = bundle.getParcelableArray(API_SUBS);
-                    String[] subsName = bundle.getStringArray(API_SUBS_NAME);
-                    if (subs != null && subs.length > 0) {
-                        for (int i = 0; i < subs.length; i++) {
-                            Uri sub = (Uri) subs[i];
-                            String name = null;
-                            if (subsName != null && subsName.length > i) {
-                                name = subsName[i];
-                            }
-                            apiSubs.add(SubtitleUtils.buildSubtitle(this, sub, name, sub.equals(defaultSub)));
+                    final List<Uri> subsEnable = readUriList(bundle, API_SUBS_ENABLE);
+                    final List<Uri> subs = readUriList(bundle, API_SUBS);
+                    final String[] subsName = readStringArray(bundle, API_SUBS_NAME);
+                    Log.d("JP_API", "keys=" + bundle.keySet() + " subs=" + subs + " enable=" + subsEnable + " names=" + java.util.Arrays.toString(subsName));
+                    final Uri defaultSub = subsEnable.isEmpty() ? null : subsEnable.get(0);
+                    for (int i = 0; i < subs.size(); i++) {
+                        final Uri sub = subs.get(i);
+                        if (sub == null) {
+                            continue;
                         }
+                        String name = null;
+                        if (subsName != null && subsName.length > i) {
+                            name = subsName[i];
+                        }
+                        boolean selected = sub.equals(defaultSub);
+                        if (!selected && defaultSub == null && i == 0 && !bundle.containsKey(API_SUBS_ENABLE)) {
+                            selected = true;
+                        }
+                        apiSubs.add(SubtitleUtils.buildSubtitle(this, sub, name, selected));
                     }
                 }
 
@@ -326,7 +333,18 @@ public class PlayerActivity extends Activity {
                     intentReturnResult = bundle.getBoolean(API_RETURN_RESULT);
 
                     if (bundle.containsKey(API_POSITION)) {
-                        mPrefs.updatePosition((long) bundle.getInt(API_POSITION));
+                        long apiPosition = 0;
+                        final Object positionExtra = bundle.get(API_POSITION);
+                        if (positionExtra instanceof Number) {
+                            apiPosition = ((Number) positionExtra).longValue();
+                        } else if (positionExtra instanceof String) {
+                            try {
+                                apiPosition = Long.parseLong((String) positionExtra);
+                            } catch (NumberFormatException ignored) {
+                            }
+                        }
+                        Log.d("JP_API", "position=" + apiPosition + " returnResult=" + intentReturnResult);
+                        mPrefs.updatePosition(apiPosition);
                     }
                 }
             }
@@ -339,6 +357,8 @@ public class PlayerActivity extends Activity {
         final float iconDensity = getResources().getDisplayMetrics().density;
         speedIcon = new PlayerIconDrawable(PlayerIconDrawable.SPEED, iconDensity);
         aspectIcon = new PlayerIconDrawable(PlayerIconDrawable.ASPECT, iconDensity);
+        rewIcon = new PlayerIconDrawable(PlayerIconDrawable.REW10, iconDensity);
+        fwdIcon = new PlayerIconDrawable(PlayerIconDrawable.FWD10, iconDensity);
         exoPlayPause = findViewById(R.id.exo_play_pause);
         loadingProgressBar = findViewById(R.id.loading);
         durationView = (RemainingTimeView) findViewById(R.id.exo_duration);
@@ -429,22 +449,9 @@ public class PlayerActivity extends Activity {
         buttonAspectRatio.setId(Integer.MAX_VALUE - 100);
         buttonAspectRatio.setContentDescription(getString(R.string.button_crop));
         buttonAspectRatio.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-        buttonAspectRatio.setPadding(Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12));
+        buttonAspectRatio.setPadding(Utils.dpToPx(11), Utils.dpToPx(11), Utils.dpToPx(11), Utils.dpToPx(11));
         buttonAspectRatio.setBackground(null);
         updatebuttonAspectRatioIcon();
-        buttonAspectRatio.setOnClickListener(view -> {
-            playerView.setScale(1.f);
-            if (playerView.getResizeMode() == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
-                playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
-                Utils.showText(playerView, getString(R.string.video_resize_crop));
-            } else {
-                // Default mode
-                playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
-                Utils.showText(playerView, getString(R.string.video_resize_fit));
-            }
-            updatebuttonAspectRatioIcon();
-            resetHideCallbacks();
-        });
         if (isTvBox && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             buttonAspectRatio.setOnLongClickListener(v -> {
                 scaleStart();
@@ -545,11 +552,11 @@ public class PlayerActivity extends Activity {
                     progressBarMarginBottom = windowInsets.getSystemWindowInsetBottom();
                 }
 
-                // Fixed reference geometry: 28dp side insets, bar lifted off the bottom edge.
-                Utils.setViewMargins(findViewById(R.id.exo_bottom_bar), marginLeft, 0, marginRight, Utils.dpToPx(19));
+                // Fixed reference geometry: 24dp side insets, bar lifted off the bottom edge.
+                Utils.setViewMargins(findViewById(R.id.exo_bottom_bar), marginLeft, 0, marginRight, Utils.dpToPx(18));
 
                 Utils.setViewParams(findViewById(R.id.exo_progress), 0, 0, 0, 0,
-                        Utils.dpToPx(28) + marginLeft, 0, Utils.dpToPx(28) + marginRight,
+                        Utils.dpToPx(24) + marginLeft, 0, Utils.dpToPx(24) + marginRight,
                         getResources().getDimensionPixelSize(R.dimen.exo_styled_progress_margin_bottom) + progressBarMarginBottom);
 
                 Utils.setViewMargins(findViewById(R.id.exo_error_message), 0, windowInsets.getSystemWindowInsetTop() / 2, 0, getResources().getDimensionPixelSize(R.dimen.exo_error_message_margin_bottom) + windowInsets.getSystemWindowInsetBottom() / 2);
@@ -615,16 +622,28 @@ public class PlayerActivity extends Activity {
         updateButtons(false);
 
         final LinearLayout exoRightGroup = (LinearLayout) findViewById(R.id.exo_right_group);
-        LinearLayout.LayoutParams aspectParams = new LinearLayout.LayoutParams(Utils.dpToPx(48), Utils.dpToPx(48));
-        aspectParams.setMarginStart(Utils.dpToPx(8));
+        LinearLayout.LayoutParams aspectParams = new LinearLayout.LayoutParams(Utils.dpToPx(44), Utils.dpToPx(44));
+        aspectParams.setMarginStart(Utils.dpToPx(2));
         aspectParams.gravity = android.view.Gravity.CENTER_VERTICAL;
         exoRightGroup.addView(buttonAspectRatio, aspectParams);
 
         exoSubtitleButton = findViewById(R.id.exo_subtitle);
-        exoMute = findViewById(R.id.exo_mute);
-        exoMute.setOnClickListener(view -> toggleMute());
         exoAudioButton = findViewById(R.id.exo_audio);
         exoAudioButton.setOnClickListener(view -> showAudioSheet());
+
+        for (int id : new int[]{R.id.exo_subtitle, R.id.exo_audio,
+                R.id.exo_rew, R.id.exo_play_pause, R.id.exo_ffwd, R.id.exo_speed}) {
+            flattenButton(findViewById(id));
+        }
+
+        // Tap the clock to flip between time left and total time.
+        flattenButton(findViewById(R.id.exo_time_group));
+        findViewById(R.id.exo_time_group).setOnClickListener(view -> {
+            if (durationView != null) {
+                durationView.toggleRemaining();
+            }
+            resetHideCallbacks();
+        });
         syncBarIcons();
 
         exoRewButton = (ImageButton) findViewById(R.id.exo_rew);
@@ -639,6 +658,8 @@ public class PlayerActivity extends Activity {
 
         exoSpeedButton = (ImageButton) findViewById(R.id.exo_speed);
         exoSpeedButton.setOnClickListener(v -> showSpeedMenu());
+        flattenButton(buttonAspectRatio);
+        buttonAspectRatio.setOnClickListener(view -> showAspectSheet());
         syncBarIcons();
 
         speedBoost.attach();
@@ -1802,15 +1823,16 @@ public class PlayerActivity extends Activity {
         // Tweak text size as fraction size doesn't work well in portrait
         final SubtitleView subtitleView = playerView.getSubtitleView();
         if (subtitleView != null) {
+            final float styleScale = subtitleStyle == null ? 1f : subtitleStyle.sizeScale();
             final float size;
             if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                size = SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * subtitlesScale;
+                size = SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * subtitlesScale * styleScale;
             } else {
                 DisplayMetrics metrics = getResources().getDisplayMetrics();
                 float ratio = ((float)metrics.heightPixels / (float)metrics.widthPixels);
                 if (ratio < 1)
                     ratio = 1 / ratio;
-                size = SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * subtitlesScale / ratio;
+                size = SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * subtitlesScale * styleScale / ratio;
             }
 
             subtitleView.setFractionalTextSize(size);
@@ -1956,22 +1978,24 @@ public class PlayerActivity extends Activity {
         final SubtitleView subtitleView = playerView.getSubtitleView();
         final boolean isTablet = Utils.isTablet(context);
         subtitlesScale = SubtitleUtils.normalizeFontScale(captioningManager.getFontScale(), isTvBox || isTablet);
+        if (subtitleStyle == null) {
+            subtitleStyle = SubtitleStyle.load(context);
+        }
         if (subtitleView != null) {
-            final CaptioningManager.CaptionStyle userStyle = captioningManager.getUserStyle();
-            final CaptionStyleCompat userStyleCompat = CaptionStyleCompat.createFromCaptionStyle(userStyle);
-            final CaptionStyleCompat captionStyle = new CaptionStyleCompat(
-                    userStyle.hasForegroundColor() ? userStyleCompat.foregroundColor : Color.WHITE,
-                    userStyle.hasBackgroundColor() ? userStyleCompat.backgroundColor : Color.TRANSPARENT,
-                    userStyle.hasWindowColor() ? userStyleCompat.windowColor : Color.TRANSPARENT,
-                    userStyle.hasEdgeType() ? userStyleCompat.edgeType : CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-                    userStyle.hasEdgeColor() ? userStyleCompat.edgeColor : Color.BLACK,
-                    Typeface.create(userStyleCompat.typeface != null ? userStyleCompat.typeface : Typeface.DEFAULT,
-                            mPrefs.subtitleStyleBold ? Typeface.BOLD : Typeface.NORMAL));
-            subtitleView.setStyle(captionStyle);
-            subtitleView.setApplyEmbeddedStyles(mPrefs.subtitleStyleEmbedded);
-            subtitleView.setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION * 2f / 3f);
+            // The in-player style editor owns colours, box, edge and position;
+            // embedded track styling would override it, so it stays off.
+            subtitleView.setStyle(subtitleStyle.toCaptionStyle());
+            subtitleView.setApplyEmbeddedStyles(false);
+            subtitleView.setApplyEmbeddedFontSizes(false);
+            subtitleView.setBottomPaddingFraction(subtitleStyle.bottomFraction());
         }
         setSubtitleTextSize();
+    }
+
+    void applySubtitleStyle(SubtitleStyle style) {
+        subtitleStyle = style;
+        style.save(this);
+        updateSubtitleStyle(this);
     }
 
     void searchSubtitles() {
@@ -2244,13 +2268,31 @@ public class PlayerActivity extends Activity {
         }
         muted = !muted;
         player.setVolume(muted ? 0f : 1f);
-        updateMuteIcon();
         resetHideCallbacks();
     }
 
     private void updateMuteIcon() {
-        if (exoMute != null) {
-            exoMute.setImageResource(muted ? R.drawable.ic_p_speaker_off : R.drawable.ic_p_speaker);
+        // The speaker button is gone; muting is handled by the hardware keys.
+    }
+
+    /**
+     * Strips every platform decoration (ripple, focus ring, elevation shadow)
+     * from a control bar button: the icon itself is the only feedback.
+     */
+    private void flattenButton(View view) {
+        if (view == null) {
+            return;
+        }
+        view.setBackground(null);
+        view.setForeground(null);
+        view.setStateListAnimator(null);
+        view.setElevation(0f);
+        view.setFocusable(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            view.setDefaultFocusHighlightEnabled(false);
+        }
+        if (view instanceof android.widget.ImageButton) {
+            ((android.widget.ImageButton) view).setStateListAnimator(null);
         }
     }
 
@@ -2260,10 +2302,10 @@ public class PlayerActivity extends Activity {
             exoSubtitleButton.setImageResource(R.drawable.ic_p_subtitles);
         }
         if (exoRewButton != null) {
-            exoRewButton.setImageResource(R.drawable.ic_p_rew10);
+            exoRewButton.setImageDrawable(rewIcon);
         }
         if (exoFfwdButton != null) {
-            exoFfwdButton.setImageResource(R.drawable.ic_p_fwd10);
+            exoFfwdButton.setImageDrawable(fwdIcon);
         }
         if (exoSpeedButton != null) {
             exoSpeedButton.setImageDrawable(speedIcon);
@@ -2322,6 +2364,23 @@ public class PlayerActivity extends Activity {
             playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
         }
         updatebuttonAspectRatioIcon();
+    }
+
+    private void showAspectSheet() {
+        playerView.showController();
+        AspectSheet sheet = new AspectSheet(this, playerView.getResizeMode(), mPrefs.scale,
+                (resizeMode, newScale) -> applyAspect(resizeMode, newScale));
+        sheet.setOnDismissListener(dialog -> resetHideCallbacks());
+        sheet.show();
+    }
+
+    private void applyAspect(int resizeMode, float scale) {
+        playerView.setResizeMode(resizeMode);
+        playerView.setScale(scale);
+        mPrefs.resizeMode = resizeMode;
+        mPrefs.scale = scale;
+        updatebuttonAspectRatioIcon();
+        resetHideCallbacks();
     }
 
     private void showSpeedMenu() {
@@ -2387,17 +2446,43 @@ public class PlayerActivity extends Activity {
             language = cleanTitle(format.label);
         }
         label.append(language != null ? language : "Track " + (position + 1));
-        if (format.channelCount > 2) {
-            label.append("  ·  ").append(format.channelCount).append("ch");
-        } else if (format.channelCount == 2) {
-            label.append("  ·  Stereo");
-        } else if (format.channelCount == 1) {
-            label.append("  ·  Mono");
+        final String channels = channelName(format.channelCount);
+        if (channels != null) {
+            label.append("  ·  ").append(channels);
         }
-        if (format.codecs != null && !format.codecs.isEmpty()) {
-            label.append("  ·  ").append(format.codecs.toUpperCase(Locale.US));
+        final String codec = codecName(format.codecs);
+        if (codec != null) {
+            label.append("  ·  ").append(codec);
         }
         return label.toString();
+    }
+
+    /** Stereo is the default and stays quiet; anything else is worth a label. */
+    private static String channelName(int channelCount) {
+        switch (channelCount) {
+            case 1: return "Mono";
+            case 6: return "5.1";
+            case 8: return "7.1";
+            default:
+                return channelCount > 2 ? channelCount + "ch" : null;
+        }
+    }
+
+    /** Readable codec names instead of raw mp4a.40.2 identifiers. */
+    private static String codecName(String codecs) {
+        if (codecs == null || codecs.isEmpty()) {
+            return null;
+        }
+        final String code = codecs.toLowerCase(Locale.US);
+        if (code.startsWith("mp4a") || code.equals("aac")) return "AAC";
+        if (code.startsWith("ac-3") || code.equals("ac3")) return "Dolby Digital";
+        if (code.startsWith("ec-3") || code.equals("eac3")) return "Dolby Digital+";
+        if (code.startsWith("dts")) return "DTS";
+        if (code.startsWith("truehd")) return "TrueHD";
+        if (code.startsWith("opus")) return "Opus";
+        if (code.startsWith("flac")) return "FLAC";
+        if (code.startsWith("vorbis")) return "Vorbis";
+        return codecs.toUpperCase(Locale.US);
     }
 
     /**
@@ -2504,7 +2589,98 @@ public class PlayerActivity extends Activity {
                         groups.get(which - 1).getMediaTrackGroup(), indexes.get(which - 1)));
             }
             player.setTrackSelectionParameters(builder.build());
-        }).show();
+        }, "Subtitle style", this::showSubtitleStyleSheet).show();
+    }
+
+    private void showSubtitleStyleSheet() {
+        if (subtitleStyle == null) {
+            subtitleStyle = SubtitleStyle.load(this);
+        }
+        playerView.showController();
+        SubtitleSheet sheet = new SubtitleSheet(this, subtitleStyle, this::applySubtitleStyle);
+        sheet.setOnDismissListener(dialog -> resetHideCallbacks());
+        sheet.show();
+    }
+
+    private static Uri toUri(Object o) {
+        if (o instanceof Uri) {
+            return (Uri) o;
+        }
+        if (o instanceof String) {
+            return parseUri((String) o);
+        }
+        if (o instanceof Bundle) {
+            Bundle b = (Bundle) o;
+            String s = b.getString("url");
+            if (s == null) {
+                s = b.getString("uri");
+            }
+            return parseUri(s);
+        }
+        return null;
+    }
+
+    private static Uri parseUri(String s) {
+        if (s == null || s.isEmpty()) {
+            return null;
+        }
+        try {
+            return Uri.parse(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static List<Uri> readUriList(Bundle bundle, String key) {
+        final List<Uri> out = new ArrayList<>();
+        final Object o = bundle.get(key);
+        if (o == null) {
+            return out;
+        }
+        if (o instanceof Parcelable[]) {
+            for (Parcelable p : (Parcelable[]) o) {
+                final Uri u = toUri(p);
+                if (u != null) {
+                    out.add(u);
+                }
+            }
+        } else if (o instanceof ArrayList) {
+            for (Object item : (ArrayList<?>) o) {
+                final Uri u = toUri(item);
+                if (u != null) {
+                    out.add(u);
+                }
+            }
+        } else if (o instanceof String[]) {
+            for (String s : (String[]) o) {
+                final Uri u = parseUri(s);
+                if (u != null) {
+                    out.add(u);
+                }
+            }
+        } else if (o instanceof String) {
+            final Uri u = parseUri((String) o);
+            if (u != null) {
+                out.add(u);
+            }
+        }
+        return out;
+    }
+
+    private static String[] readStringArray(Bundle bundle, String key) {
+        final Object o = bundle.get(key);
+        if (o instanceof String[]) {
+            return (String[]) o;
+        }
+        if (o instanceof ArrayList) {
+            final ArrayList<?> list = (ArrayList<?>) o;
+            final String[] arr = new String[list.size()];
+            for (int i = 0; i < list.size(); i++) {
+                arr[i] = String.valueOf(list.get(i));
+            }
+            return arr;
+        }
+        return null;
     }
 
     private static String subtitleLabel(Format format, int position) {

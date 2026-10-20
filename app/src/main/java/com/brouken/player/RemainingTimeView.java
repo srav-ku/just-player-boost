@@ -10,9 +10,14 @@ import androidx.media3.common.Player;
 
 import java.util.Locale;
 
+/**
+ * Duration label. Shows "-1:23:45" (time left) by default; tapping the time
+ * group flips it to the total duration and back.
+ */
 public class RemainingTimeView extends AppCompatTextView {
 
     private Player player;
+    private boolean showRemaining = true;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable ticker = new Runnable() {
         @Override
@@ -45,33 +50,52 @@ public class RemainingTimeView extends AppCompatTextView {
         }
     }
 
+    public boolean isShowRemaining() {
+        return showRemaining;
+    }
+
+    public void toggleRemaining() {
+        showRemaining = !showRemaining;
+        refresh();
+    }
+
     @Override
     public void setText(CharSequence text, BufferType type) {
         if (player != null && text != null && text.length() > 0 && text.charAt(0) != '-') {
-            long remaining = remainingMs();
-            if (remaining >= 0) {
-                text = "-" + format(remaining);
+            CharSequence value = formatted();
+            if (value != null) {
+                text = value;
             }
         }
         super.setText(text, type);
     }
 
-    private long remainingMs() {
+    private CharSequence formatted() {
         try {
             long duration = player.getDuration();
-            if (duration <= 0) return -1;
-            long remaining = duration - player.getCurrentPosition();
-            return remaining < 0 ? 0 : remaining;
+            if (duration <= 0) {
+                return null;
+            }
+            if (showRemaining) {
+                long remaining = duration - player.getCurrentPosition();
+                if (remaining < 0) {
+                    remaining = 0;
+                }
+                return "-" + format(remaining);
+            }
+            return format(duration);
         } catch (Exception e) {
-            return -1;
+            return null;
         }
     }
 
     private void refresh() {
-        long remaining = remainingMs();
-        if (remaining < 0) return;
+        CharSequence value = player == null ? null : formatted();
+        if (value == null) {
+            return;
+        }
         try {
-            super.setText("-" + format(remaining), BufferType.NORMAL);
+            super.setText(value, BufferType.NORMAL);
         } catch (Exception ignored) {
         }
     }

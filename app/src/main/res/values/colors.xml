@@ -9,7 +9,7 @@
     <color name="exo_bottom_bar_background" tools:keep="@color/exo_bottom_bar_background">@color/ui_controls_background</color>
     <color name="exo_black_opacity_70" tools:keep="@color/exo_black_opacity_70">@color/ui_controls_background</color>
     <color name="exo_styled_error_message_background" tools:keep="@color/exo_styled_error_message_background">@color/ui_controls_background</color>
-    <color name="boost_accent">#FFB7ABFF</color>
-    <color name="progress_buffered">#66FFFFFF</color>
-    <color name="progress_unplayed">#5A5A5A</color>
+    <color name="boost_accent">#FF8A5CF6</color>
+    <color name="progress_buffered">#4DFFFFFF</color>
+    <color name="progress_unplayed">#38FFFFFF</color>
 </resources>

@@ -3,13 +3,21 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <group
-        android:pivotX="12"
-        android:pivotY="12"
-        android:scaleX="1.1"
-        android:scaleY="1.1">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M4,13.4h1.9v3.2H4zM7.6,10.6h1.9v6H7.6zM11.2,7.2h1.9v9.4h-1.9zM14.8,9.8h1.9v6.8h-1.9zM18.4,12.4h1.9v4.2h-1.9z" />
-    </group>
+    <!-- Audio language: hairline globe -->
+    <path
+        android:pathData="M12,4a8,8 0 1 0 0,16a8,8 0 1 0 0,-16z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.7"
+        android:fillColor="@android:color/transparent" />
+    <path
+        android:pathData="M12,4c2.2,2.1 3.4,4.9 3.4,8s-1.2,5.9 -3.4,8c-2.2,-2.1 -3.4,-4.9 -3.4,-8s1.2,-5.9 3.4,-8z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.5"
+        android:fillColor="@android:color/transparent" />
+    <path
+        android:pathData="M4.2,12h15.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent" />
 </vector>

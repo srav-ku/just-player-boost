@@ -501,6 +501,8 @@ public final class YouTubeOverlay extends ConstraintLayout implements PlayerDoub
         // Otherwise
         playerView.keepInDoubleTapMode();
         player.seekTo(newPosition);
+        // Seeking is not a menu gesture.
+        playerView.hideController();
     }
 
     private void forwarding() {

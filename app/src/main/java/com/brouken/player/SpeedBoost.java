@@ -161,19 +161,22 @@ public class SpeedBoost {
         ViewGroup playerView = activity.findViewById(R.id.video_view);
         if (playerView == null) return;
         pill = new TextView(activity);
-        pill.setTypeface(Typeface.DEFAULT_BOLD);
-        pill.setTextColor(0xFFB7ABFF);
-        pill.setTextSize(15);
-        int hpad = dp(14), vpad = dp(7);
+        pill.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        pill.setTextColor(0xFFFFFFFF);
+        pill.setTextSize(14);
+        pill.setSingleLine(true);
+        pill.setGravity(Gravity.CENTER);
+        pill.setIncludeFontPadding(false);
+        int hpad = dp(16), vpad = dp(9);
         pill.setPadding(hpad, vpad, hpad, vpad);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xE6141219);
-        bg.setCornerRadius(dp(22));
+        bg.setColor(0xFF8A5CF6);
+        bg.setCornerRadius(dp(100));
         pill.setBackground(bg);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        lp.topMargin = dp(48);
+        lp.topMargin = dp(44);
         pill.setLayoutParams(lp);
         pill.setAlpha(0f);
         playerView.addView(pill);
@@ -185,7 +188,9 @@ public class SpeedBoost {
         if (pill == null) return;
         updatePill();
         handler.removeCallbacks(hidePill);
-        pill.animate().alpha(1f).setDuration(140).start();
+        pill.setScaleX(0.92f);
+        pill.setScaleY(0.92f);
+        pill.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(150).start();
     }
 
     private void hidePill() {
@@ -193,7 +198,7 @@ public class SpeedBoost {
     }
 
     private void updatePill() {
-        if (pill != null) pill.setText(String.format("%.2fx", level));
+        if (pill != null) pill.setText(String.format(java.util.Locale.US, "%.1f×", level));
     }
 
     private int dp(int v) {

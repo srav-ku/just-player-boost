@@ -19,6 +19,8 @@ import androidx.media3.exoplayer.SeekParameters;
 import androidx.media3.ui.AspectRatioFrameLayout;
 import androidx.media3.ui.PlayerView;
 
+import com.brouken.player.dtpv.DoubleTapPlayerView;
+
 import java.util.Collections;
 
 public class CustomPlayerView extends PlayerView implements GestureDetector.OnGestureListener, ScaleGestureDetector.OnScaleGestureListener {
@@ -295,8 +297,22 @@ public class CustomPlayerView extends PlayerView implements GestureDetector.OnGe
     public void onLongPress(MotionEvent motionEvent) {
         if (PlayerActivity.locked) return;
         isHandledLongPress = true;
-        Utils.showText(this, "", MESSAGE_TIMEOUT_LONG);
+        // No text message here: the boost pill is the only thing on screen.
         if (speedBoost != null) speedBoost.onLongPressDetected(motionEvent.getRawX());
+    }
+
+    /**
+     * Double-tap seeking is a playback gesture, not a menu gesture: keep the
+     * controller (and its auto-show on buffering) out of the way while the
+     * double-tap window is active.
+     */
+    @Override
+    public void showController() {
+        if (this instanceof DoubleTapPlayerView && ((DoubleTapPlayerView) this).isInDoubleTapMode()) {
+            super.hideController();
+            return;
+        }
+        super.showController();
     }
 
     @Override
