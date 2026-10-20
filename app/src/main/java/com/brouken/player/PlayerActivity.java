@@ -1351,6 +1351,15 @@ public class PlayerActivity extends Activity {
                 MediaItem.SubtitleConfiguration subtitle = SubtitleUtils.buildSubtitle(this, mPrefs.subtitleUri, null, true);
                 mediaItemBuilder.setSubtitleConfigurations(Collections.singletonList(subtitle));
             }
+            final String savedOnlineSub = getSavedOnlineSub();
+            if (savedOnlineSub != null) {
+                final java.util.List<MediaItem.SubtitleConfiguration> withSaved = new ArrayList<>();
+                if (apiAccess && apiSubs.size() > 0) {
+                    withSaved.addAll(apiSubs);
+                }
+                withSaved.add(SubtitleUtils.buildSubtitle(this, Uri.parse(savedOnlineSub), null, true));
+                mediaItemBuilder.setSubtitleConfigurations(withSaved);
+            }
             player.setMediaItem(mediaItemBuilder.build(), mPrefs.getPosition());
 
             try {
@@ -2615,6 +2624,20 @@ public class PlayerActivity extends Activity {
         sheet.show();
     }
 
+    private String getSavedOnlineSub() {
+        if (mPrefs.mediaUri == null) {
+            return null;
+        }
+        return getSharedPreferences("online_subs", MODE_PRIVATE).getString(mPrefs.mediaUri.toString(), null);
+    }
+
+    private void saveOnlineSub(String url) {
+        if (mPrefs.mediaUri == null || url == null) {
+            return;
+        }
+        getSharedPreferences("online_subs", MODE_PRIVATE).edit().putString(mPrefs.mediaUri.toString(), url).apply();
+    }
+
     private void startOnlineSearch() {
         if (player == null) {
             return;
@@ -2668,6 +2691,7 @@ public class PlayerActivity extends Activity {
                     new ArrayList<>(current.localConfiguration.subtitleConfigurations);
             final String label = entry.lang != null && !entry.lang.isEmpty() ? entry.lang : null;
             subs.add(SubtitleUtils.buildSubtitle(this, Uri.parse(entry.url), label, true));
+            saveOnlineSub(entry.url);
             final MediaItem updated = current.buildUpon().setSubtitleConfigurations(subs).build();
             player.setMediaItem(updated, position);
             player.prepare();
