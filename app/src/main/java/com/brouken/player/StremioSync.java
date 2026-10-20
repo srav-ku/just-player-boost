@@ -167,7 +167,7 @@ public class StremioSync {
                     putBody.put("changes", new JSONArray().put(item));
                     final String putResponse = http(API + "datastorePut", putBody.toString());
                     Log.d(TAG, "datastorePut <- " + trim(putResponse) + " at " + (positionMs / 1000) + "s timeOffset=" + incoming + "ms duration=" + durationLocal + "ms");
-                    verifyLibrary(videoId);
+                    verifyLibrary(videoId, authKey);
                 } catch (Exception e) {
                     Log.d(TAG, "push exception: " + e);
                 }
@@ -175,7 +175,7 @@ public class StremioSync {
         });
     }
 
-    private static void verifyLibrary(final String videoId) {
+    private static void verifyLibrary(final String videoId, final String authKey) {
         try {
             final JSONObject body = new JSONObject();
             body.put("authKey", authKey);
