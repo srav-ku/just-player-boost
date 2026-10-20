@@ -2630,8 +2630,12 @@ public class PlayerActivity extends Activity {
             return;
         }
         final java.util.List<String> labels = new ArrayList<>();
+        final java.util.Map<String, Integer> counters = new java.util.HashMap<>();
         for (OnlineSubtitleSearch.Entry entry : entries) {
-            labels.add(entry.label());
+            final String base = OnlineSubtitleSearch.langNameOf(entry.lang);
+            final int seen = counters.containsKey(base) ? counters.get(base) + 1 : 1;
+            counters.put(base, seen);
+            labels.add(base + "  (" + seen + ")");
         }
         playerView.showController();
         new TrackSheet(this, "Online subtitles (" + entries.size() + ")", labels, -1, which -> {

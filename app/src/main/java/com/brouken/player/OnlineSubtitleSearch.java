@@ -222,11 +222,37 @@ public class OnlineSubtitleSearch {
         return parsed;
     }
 
+    public static String langNameOf(String code) {
+        return langName(code);
+    }
+
     private static String langName(String code) {
         if (code == null) {
             return "Unknown";
         }
-        switch (code.toLowerCase()) {
+        String c = code.toLowerCase();
+        if (c.length() == 3) {
+            switch (c) {
+                case "eng": c = "en"; break;
+                case "tel": c = "te"; break;
+                case "hin": c = "hi"; break;
+                case "tam": c = "ta"; break;
+                case "mal": c = "ml"; break;
+                case "kan": c = "kn"; break;
+                case "spa": c = "es"; break;
+                case "fre": case "fra": c = "fr"; break;
+                case "ger": case "deu": c = "de"; break;
+                case "ita": c = "it"; break;
+                case "por": c = "pt"; break;
+                case "rus": c = "ru"; break;
+                case "ara": c = "ar"; break;
+                case "chi": case "zho": c = "zh"; break;
+                case "jpn": c = "ja"; break;
+                case "kor": c = "ko"; break;
+                default: break;
+            }
+        }
+        switch (c) {
             case "en": return "English";
             case "te": return "Telugu";
             case "hi": return "Hindi";
@@ -243,7 +269,7 @@ public class OnlineSubtitleSearch {
             case "zh": return "Chinese";
             case "ja": return "Japanese";
             case "ko": return "Korean";
-            default: return code.toUpperCase();
+            default: return c.toUpperCase();
         }
     }
 }
