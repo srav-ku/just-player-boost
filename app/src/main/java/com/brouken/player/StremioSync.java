@@ -143,16 +143,18 @@ public class StremioSync {
                     if (state == null) {
                         state = new JSONObject();
                     }
-                    final long incoming = positionMs / 1000;
+                    final long incoming = positionMs;
                     final long remote = state.optLong("timeOffset", 0L);
-                    final long durationSec = durationMs / 1000;
-                    final boolean nearEnd = durationSec > 0 && incoming >= durationSec - 30;
-                    if (!nearEnd && remote > 0 && incoming + 60 < remote) {
-                        Log.d(TAG, "push skipped: remote " + remote + "s > local " + incoming + "s");
+                    final long durationLocal = durationMs > 0 ? durationMs : state.optLong("duration", 0L);
+                    final boolean nearEnd = durationLocal > 0 && incoming >= durationLocal - 30000;
+                    if (!nearEnd && remote > 0 && incoming + 60000 < remote) {
+                        Log.d(TAG, "push skipped: remote " + remote + "ms > local " + incoming + "ms");
                         return;
                     }
                     state.put("timeOffset", incoming);
-                    state.put("duration", durationMs / 1000);
+                    if (durationLocal > 0) {
+                        state.put("duration", durationLocal);
+                    }
                     state.put("lastWatched", isoNow());
                     state.put("video_id", videoId);
                     if (resolved.series) {
